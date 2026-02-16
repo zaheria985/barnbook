@@ -1,6 +1,41 @@
 # Barnbook
 
-A self-hosted equestrian management app for budget tracking, ride logging with gait detection, calendar/event planning, weather-aware ride scheduling, and checklist automation.
+A self-hosted equestrian management app for budget tracking, ride logging with gait detection, calendar planning, and weather-aware scheduling — built for riders who want full control of their data.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+## Features
+
+- **Budget Tracking** — Monthly budgets with category breakdowns, spending charts, and savings goals
+- **Income Management** — Track income sources with recurring entry support and year-over-year comparison
+- **Ride Logging** — Record rides with gait breakdowns (walk/trot/canter), duration, calories, and horse-specific stats
+- **Gait Detection** — Automatic walk/trot/canter classification via accelerometer on Apple Watch
+- **Calendar & Events** — Monthly calendar with color-coded event types, ride scheduling, and day detail views
+- **Weather Integration** — Apple WeatherKit forecasts for ride planning with temperature, wind, and conditions
+- **Checklists** — Daily/weekly barn checklists with optional Vikunja sync for shared task management
+- **Email Ingest** — Forward receipts via email webhook to auto-create budget transactions
+- **Apple Watch App** — Standalone watchOS companion with GPS tracking, heart rate, and offline sync
+- **Dark Mode** — Full light/dark theme with system preference detection
+- **Self-Hosted** — Docker Compose stack with PostgreSQL, zero external dependencies required
+
+<details>
+<summary>More screenshots</summary>
+
+![Budget](docs/screenshots/budget.png)
+![Rides](docs/screenshots/rides.png)
+![Calendar](docs/screenshots/calendar.png)
+
+</details>
+
+## Tech Stack
+
+- **Framework** — Next.js 14 (App Router, standalone output)
+- **Database** — PostgreSQL 16
+- **Auth** — NextAuth.js 4 with JWT + bcrypt credentials
+- **Styling** — Tailwind CSS with CSS custom properties for theming
+- **Charts** — Recharts
+- **Tables** — TanStack Table
+- **Watch** — Native watchOS 10+ (Swift, CoreMotion, HealthKit, CoreLocation)
 
 ## Docker Quick Start (Recommended)
 
@@ -205,16 +240,17 @@ Visit `http://localhost:3100`.
 | `WEATHERKIT_PRIVATE_KEY` | No | WeatherKit private key (base64) |
 | `EMAIL_INGEST_SECRET` | No | Shared secret for email webhook |
 
-Optional integrations (Vikunja, WeatherKit, email) work without configuration -- features gracefully degrade when credentials are not set.
+Optional integrations (Vikunja, WeatherKit, email) work without configuration — features gracefully degrade when credentials are not set.
 
 ## Apple Watch Companion
 
 The `watch/` directory contains a standalone watchOS 10+ app for ride tracking:
 
-- Gait detection via accelerometer (walk/trot/canter)
-- GPS distance tracking
-- Heart rate monitoring via HealthKit
-- Syncs rides to the web app API
+- **Gait Detection** — Accelerometer-based walk/trot/canter classification in real time
+- **GPS Tracking** — Distance and route recording via CoreLocation
+- **Heart Rate** — Live BPM monitoring through HealthKit workout sessions
+- **Offline Sync** — Rides queue locally and sync to the web API when connectivity returns
+- **Calorie Estimates** — Rider and horse calorie calculations matching the web app formulas
 
 Open `watch/Barnbook.xcodeproj` in Xcode 15+ to build and deploy. Requires macOS 14+ and an Apple Developer account for device deployment.
 
@@ -237,4 +273,4 @@ Open `watch/Barnbook.xcodeproj` in Xcode 15+ to build and deploy. Requires macOS
   - Run `npm run db:migrate` (or restart the Docker container, which runs migrations automatically).
 - **Integrations not working:**
   - Check that the relevant environment variables are set (Vikunja, WeatherKit, etc.).
-  - Features degrade gracefully -- missing credentials won't break the app.
+  - Features degrade gracefully — missing credentials won't break the app.
