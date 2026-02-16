@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: barnbook
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: barnbook
+    volumes:
+      - barnbook_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barnbook -d barnbook"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://barnbook:${DB_PASSWORD}@db:5432/barnbook
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      BOOTSTRAP_SCHEMA: ${BOOTSTRAP_SCHEMA:-1}
+      SEED_DEFAULT_USER: ${SEED_DEFAULT_USER:-1}
+    ports:
+      - "${APP_PORT:-3100}:3000"
+
+volumes:
+  barnbook_data:
