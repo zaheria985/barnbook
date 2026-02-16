@@ -3,25 +3,68 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --app-bg: #faf8f5;
+  --app-text: #2d2319;
+  --surface: #ffffff;
+  --surface-muted: #f5f3f0;
+  --surface-subtle: #ece9e4;
+  --text-primary: #1a1108;
+  --text-secondary: #3d3228;
+  --text-tertiary: #5c5147;
+  --text-muted: #8a7f73;
+  --border: #d4cdc4;
+  --border-light: #e8e3dc;
+  --interactive: #2d6a4f;
+  --interactive-hover: #1b4332;
+  --interactive-light: #ecf5f0;
+  --input-bg: #ffffff;
+  --input-border: #d4cdc4;
+  --input-text: #1a1108;
+  --input-placeholder: #8a7f73;
+  --input-focus-ring: #2d6a4f;
+  --success-bg: #ecfdf5;
+  --success-text: #047857;
+  --success-solid: #10b981;
+  --warning-bg: #fffbeb;
+  --warning-text: #b45309;
+  --warning-solid: #f59e0b;
+  --warning-border: #fde68a;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+  --error-border: #fecaca;
+  --overlay: rgb(0 0 0 / 50%);
+  --brand: #15803d;
+  --brand-contrast: #ffffff;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #5c5147;
+  --sidebar-hover: #f5f3f0;
+  --sidebar-active-bg: #ecf5f0;
+  --sidebar-active-text: #1b4332;
+  --muted-text: #8a7f73;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
   }
-}
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  @media (max-width: 768px) {
+    button,
+    input,
+    select,
+    textarea {
+      min-height: 44px;
+    }
   }
 }

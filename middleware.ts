@@ -1,11 +1,18 @@
-import { withAuth } from "next-auth/middleware";
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
-export default withAuth({
-  callbacks: {
-    authorized: ({ token }) => !!token,
-  },
-});
+export async function middleware(req: NextRequest) {
+  const token = await getToken({ req });
+
+  if (!token) {
+    const loginUrl = new URL("/auth/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: ["/((?!auth|api/auth|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/budget/:path*", "/settings/:path*"],
 };
