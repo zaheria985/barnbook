@@ -71,9 +71,9 @@ export default function IncomePage() {
   const [error, setError] = useState("");
   const [showSourceManager, setShowSourceManager] = useState(false);
 
-  const [editingSource, setEditingSource] = useState<string | null>(null);
-  const [editProjected, setEditProjected] = useState("");
-  const [editActual, setEditActual] = useState("");
+  const [pendingEdits, setPendingEdits] = useState<
+    Record<string, { projected: string; actual: string }>
+  >({});
 
   const [showAddSale, setShowAddSale] = useState(false);
   const [saleDescription, setSaleDescription] = useState("");
@@ -113,7 +113,37 @@ export default function IncomePage() {
     fetchData();
   }, [fetchData]);
 
-  async function handleUpdateIncome(sourceId: string) {
+  function getEditValues(sourceId: string) {
+    if (pendingEdits[sourceId]) return pendingEdits[sourceId];
+    const mi = monthlyIncome.find((i) => i.source_id === sourceId);
+    return {
+      projected: String(mi?.projected_amount || 0),
+      actual: String(mi?.actual_amount || 0),
+    };
+  }
+
+  function setEditField(sourceId: string, field: "projected" | "actual", value: string) {
+    const current = getEditValues(sourceId);
+    setPendingEdits((prev) => ({
+      ...prev,
+      [sourceId]: { ...current, [field]: value },
+    }));
+  }
+
+  async function handleSaveIncome(sourceId: string) {
+    const vals = getEditValues(sourceId);
+    const projected = Number(vals.projected) || 0;
+    const actual = Number(vals.actual) || 0;
+
+    // Skip save if nothing changed
+    const mi = monthlyIncome.find((i) => i.source_id === sourceId);
+    if (
+      projected === Number(mi?.projected_amount || 0) &&
+      actual === Number(mi?.actual_amount || 0)
+    ) {
+      return;
+    }
+
     try {
       const res = await fetch("/api/income/monthly", {
         method: "PUT",
@@ -121,12 +151,16 @@ export default function IncomePage() {
         body: JSON.stringify({
           yearMonth: month,
           sourceId,
-          projected: Number(editProjected) || 0,
-          actual: Number(editActual) || 0,
+          projected,
+          actual,
         }),
       });
       if (!res.ok) throw new Error("Failed to update");
-      setEditingSource(null);
+      setPendingEdits((prev) => {
+        const next = { ...prev };
+        delete next[sourceId];
+        return next;
+      });
       await fetchData();
     } catch {
       setError("Failed to update income");
@@ -170,8 +204,6 @@ export default function IncomePage() {
   const totalActual = monthlyIncome.reduce((s, i) => s + Number(i.actual_amount), 0);
   const totalSales = sales.reduce((s, sale) => s + Number(sale.amount), 0);
 
-  const incomeBySourceId = new Map(monthlyIncome.map((i) => [i.source_id, i]));
-
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
@@ -210,92 +242,76 @@ export default function IncomePage() {
                 No income sources. Add one via Manage Sources.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[var(--border-light)]">
-                      <th className="py-2 text-left text-sm font-medium text-[var(--text-secondary)]">Source</th>
-                      <th className="py-2 text-right text-sm font-medium text-[var(--text-secondary)]">Projected</th>
-                      <th className="py-2 text-right text-sm font-medium text-[var(--text-secondary)]">Actual</th>
-                      <th className="py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sources.map((source) => {
-                      const mi = incomeBySourceId.get(source.id);
-                      const isEditing = editingSource === source.id;
+              <div className="space-y-3">
+                {sources.map((source) => {
+                  const vals = getEditValues(source.id);
+                  return (
+                    <div
+                      key={source.id}
+                      className="rounded-lg border border-[var(--border-light)] bg-[var(--surface-muted)] p-3"
+                    >
+                      <p className="mb-2 font-medium text-[var(--text-primary)]">
+                        {source.name}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                            Projected
+                          </label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              inputMode="decimal"
+                              value={vals.projected}
+                              onChange={(e) =>
+                                setEditField(source.id, "projected", e.target.value)
+                              }
+                              onBlur={() => handleSaveIncome(source.id)}
+                              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                            Actual
+                          </label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              inputMode="decimal"
+                              value={vals.actual}
+                              onChange={(e) =>
+                                setEditField(source.id, "actual", e.target.value)
+                              }
+                              onBlur={() => handleSaveIncome(source.id)}
+                              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
 
-                      return (
-                        <tr key={source.id} className="border-b border-[var(--border-light)] last:border-0">
-                          <td className="py-3 text-[var(--text-primary)]">{source.name}</td>
-                          <td className="py-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                value={editProjected}
-                                onChange={(e) => setEditProjected(e.target.value)}
-                                className="w-24 rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-right text-sm"
-                              />
-                            ) : (
-                              <span className="text-[var(--text-primary)]">
-                                {formatCurrency(mi?.projected_amount || 0)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                value={editActual}
-                                onChange={(e) => setEditActual(e.target.value)}
-                                className="w-24 rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-right text-sm"
-                              />
-                            ) : (
-                              <span className="text-[var(--text-primary)]">
-                                {formatCurrency(mi?.actual_amount || 0)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 text-right">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateIncome(source.id)}
-                                  className="mr-2 text-xs text-[var(--interactive)] hover:underline"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingSource(null)}
-                                  className="text-xs text-[var(--text-muted)] hover:underline"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingSource(source.id);
-                                  setEditProjected(String(mi?.projected_amount || 0));
-                                  setEditActual(String(mi?.actual_amount || 0));
-                                }}
-                                className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="border-t-2 border-[var(--border)] font-semibold">
-                      <td className="py-3 text-[var(--text-primary)]">Total Income</td>
-                      <td className="py-3 text-right text-[var(--text-primary)]">{formatCurrency(totalProjected)}</td>
-                      <td className="py-3 text-right text-[var(--text-primary)]">{formatCurrency(totalActual)}</td>
-                      <td></td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 font-semibold">
+                  <span className="text-[var(--text-primary)]">Total Income</span>
+                  <div className="flex gap-6 text-sm">
+                    <span className="text-[var(--text-secondary)]">
+                      Projected: {formatCurrency(totalProjected)}
+                    </span>
+                    <span className="text-[var(--text-primary)]">
+                      Actual: {formatCurrency(totalActual)}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

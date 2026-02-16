@@ -12,3 +12,10 @@ public/uploads/
 .DS_Store
 Thumbs.db
 .sisyphus/
+
+# Xcode / watchOS
+watch/Barnbook.xcodeproj/xcuserdata/
+watch/Barnbook.xcodeproj/project.xcworkspace/xcuserdata/
+watch/**/*.xcuserstate
+watch/build/
+watch/DerivedData/

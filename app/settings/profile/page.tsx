@@ -25,28 +25,19 @@ export default function ProfilePage() {
     async function load() {
       setLoading(true);
       setError("");
-      setSuccess("");
 
       try {
         const res = await fetch("/api/auth/profile", { cache: "no-store" });
-        const data = (await res.json().catch(() => null)) as
-          | Profile
-          | { error?: string }
-          | null;
+        const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          const message =
-            data && typeof data === "object" && "error" in data
-              ? (data as { error?: string }).error
-              : "Failed to load profile";
-          throw new Error(message || "Failed to load profile");
+          throw new Error(data?.error || "Failed to load profile");
         }
 
-        if (!cancelled && data && !("error" in (data as object))) {
-          const p = data as Profile;
-          setProfile(p);
-          setName(p.name || "");
-          setWeight(p.weight_lbs == null ? "" : String(p.weight_lbs));
+        if (!cancelled && data) {
+          setProfile(data);
+          setName(data.name || "");
+          setWeight(data.weight_lbs == null ? "" : String(data.weight_lbs));
         }
       } catch (e) {
         if (!cancelled) {
@@ -93,24 +84,17 @@ export default function ProfilePage() {
         }),
       });
 
-      const data = (await res.json().catch(() => null)) as
-        | Profile
-        | { error?: string }
-        | null;
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const message =
-          data && typeof data === "object" && "error" in data
-            ? (data as { error?: string }).error
-            : "Failed to save";
-        throw new Error(message || "Failed to save");
+        throw new Error(data?.error || "Failed to save");
       }
 
-      const p = data as Profile;
-      setProfile(p);
-      setName(p.name || "");
-      setWeight(p.weight_lbs == null ? "" : String(p.weight_lbs));
+      setProfile(data);
+      setName(data.name || "");
+      setWeight(data.weight_lbs == null ? "" : String(data.weight_lbs));
       setSuccess("Saved");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -119,91 +103,100 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="mx-auto w-full max-w-xl">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">Profile</h1>
+    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+          Profile
+        </h1>
+      </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          {loading ? (
-            <p className="text-sm text-gray-600">Loading...</p>
-          ) : error ? (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          ) : (
-            <form onSubmit={handleSave} className="space-y-4">
-              {success && (
-                <div className="rounded bg-green-50 p-3 text-sm text-green-800">
-                  {success}
-                </div>
-              )}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Name
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={profile?.email || ""}
-                  disabled
-                  className="mt-1 block w-full cursor-not-allowed rounded border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="weight"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Weight (lbs)
-                </label>
-                <input
-                  id="weight"
-                  name="weight"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full rounded bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </form>
-          )}
+      {error && (
+        <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
+          {error}
+          <button onClick={() => setError("")} className="ml-2 font-medium underline">
+            Dismiss
+          </button>
         </div>
+      )}
 
-        {!loading && !error && profile && (
-          <p className="mt-4 text-xs text-gray-500">User ID: {profile.id}</p>
+      {success && (
+        <div className="mb-4 rounded-lg border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-sm text-[var(--success-text)]">
+          {success}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-6">
+        {loading ? (
+          <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              >
+                Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={profile?.email || ""}
+                disabled
+                className="w-full cursor-not-allowed rounded-lg border border-[var(--input-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-muted)]"
+              />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Email cannot be changed
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="weight"
+                className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              >
+                Weight (lbs)
+                <span className="ml-1 font-normal text-[var(--text-muted)]">
+                  — used for ride calorie estimates
+                </span>
+              </label>
+              <input
+                id="weight"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+                placeholder="Optional"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50 transition-colors"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </form>
         )}
       </div>
     </div>

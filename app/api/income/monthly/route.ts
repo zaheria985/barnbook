@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { setMonthlyIncome } from "@/lib/queries/income";
+import { getMonthlyIncome, setMonthlyIncome } from "@/lib/queries/income";
 import { isMonthClosed } from "@/lib/queries/monthly-budgets";
+
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const month = request.nextUrl.searchParams.get("month");
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    return NextResponse.json(
+      { error: "month query param required (YYYY-MM)" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const income = await getMonthlyIncome(month);
+    return NextResponse.json(income);
+  } catch (error) {
+    console.error("Failed to get monthly income:", error);
+    return NextResponse.json(
+      { error: "Failed to get monthly income" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
