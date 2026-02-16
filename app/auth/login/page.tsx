@@ -44,26 +44,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">
-          Sign in to Barnbook
-        </h1>
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            Sign in to Barnbook
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Welcome back
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {registered && !error && (
-            <div className="rounded bg-green-50 p-3 text-sm text-green-800">
+            <div className="rounded-lg bg-[var(--success-bg)] p-3 text-sm text-[var(--success-text)]">
               Account created. Please sign in.
             </div>
           )}
           {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">
+            <div className="rounded-lg bg-[var(--error-bg)] p-3 text-sm text-[var(--error-text)]">
               {error}
             </div>
           )}
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-[var(--text-secondary)]"
             >
               Email
             </label>
@@ -75,13 +80,13 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="mt-1 block w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)] shadow-sm placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
             />
           </div>
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-[var(--text-secondary)]"
             >
               Password
             </label>
@@ -93,20 +98,20 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="mt-1 block w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)] shadow-sm placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
+            className="w-full rounded-xl bg-[var(--interactive)] px-4 py-2.5 font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50 transition-colors"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/register" className="text-green-700 hover:underline">
+          <Link href="/auth/register" className="text-[var(--interactive)] hover:underline">
             Register
           </Link>
         </p>
