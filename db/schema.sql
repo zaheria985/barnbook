@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Horses (must be before budget_category_sub_items for FK)
+CREATE TABLE IF NOT EXISTS horses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  weight_lbs DECIMAL(6,1),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Budget Categories
 CREATE TABLE IF NOT EXISTS budget_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,6 +38,7 @@ CREATE TABLE IF NOT EXISTS budget_category_sub_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id UUID NOT NULL REFERENCES budget_categories(id) ON DELETE CASCADE,
   label TEXT NOT NULL,
+  horse_id UUID REFERENCES horses(id) ON DELETE SET NULL,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
@@ -106,10 +116,137 @@ CREATE TABLE IF NOT EXISTS monthly_balances (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Ride Sessions
+CREATE TABLE IF NOT EXISTS ride_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rider_id UUID NOT NULL REFERENCES users(id),
+  horse_id UUID NOT NULL REFERENCES horses(id),
+  date DATE NOT NULL,
+  total_duration_minutes INTEGER NOT NULL,
+  walk_minutes INTEGER NOT NULL DEFAULT 0,
+  trot_minutes INTEGER NOT NULL DEFAULT 0,
+  canter_minutes INTEGER NOT NULL DEFAULT 0,
+  distance_miles DECIMAL(5,2),
+  rider_calories_burned INTEGER,
+  horse_mcal_expended DECIMAL(5,2),
+  notes TEXT,
+  source TEXT DEFAULT 'manual',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Horse Savings Account
 CREATE TABLE IF NOT EXISTS horse_savings_account (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   balance DECIMAL(10,2) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Checklist Templates
+CREATE TABLE IF NOT EXISTS checklist_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Checklist Template Items
+CREATE TABLE IF NOT EXISTS checklist_template_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES checklist_templates(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  days_before_event INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- Checklist Template Reminders
+CREATE TABLE IF NOT EXISTS checklist_template_reminders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES checklist_templates(id) ON DELETE CASCADE,
+  days_before INTEGER NOT NULL
+);
+
+-- Events
+CREATE TABLE IF NOT EXISTS events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  location TEXT,
+  entry_due_date DATE,
+  notes TEXT,
+  checklist_template_id UUID REFERENCES checklist_templates(id) ON DELETE SET NULL,
+  vikunja_task_id TEXT,
+  is_confirmed BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Event Checklists (instantiated from templates)
+CREATE TABLE IF NOT EXISTS event_checklists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  due_date DATE,
+  is_completed BOOLEAN NOT NULL DEFAULT false,
+  vikunja_task_id TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Detection Keywords
+CREATE TABLE IF NOT EXISTS detection_keywords (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  keyword TEXT NOT NULL,
+  suggested_event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Ride Schedule
+CREATE TABLE IF NOT EXISTS ride_schedule (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Weather Settings
+CREATE TABLE IF NOT EXISTS weather_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_lat DECIMAL(9,6),
+  location_lng DECIMAL(9,6),
+  rain_cutoff_inches DECIMAL(4,2) NOT NULL DEFAULT 0.25,
+  rain_window_hours INTEGER NOT NULL DEFAULT 4,
+  cold_alert_temp_f INTEGER NOT NULL DEFAULT 25,
+  heat_alert_temp_f INTEGER NOT NULL DEFAULT 95,
+  wind_cutoff_mph INTEGER NOT NULL DEFAULT 30,
+  has_indoor_arena BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Vikunja Task Map
+CREATE TABLE IF NOT EXISTS vikunja_task_map (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vikunja_task_id TEXT NOT NULL,
+  event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+  checklist_id UUID REFERENCES event_checklists(id) ON DELETE CASCADE,
+  sync_type TEXT NOT NULL DEFAULT 'push',
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Vendor Mappings
+CREATE TABLE IF NOT EXISTS vendor_mappings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_pattern TEXT NOT NULL,
+  category_id UUID NOT NULL REFERENCES budget_categories(id),
+  sub_item_id UUID REFERENCES budget_category_sub_items(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

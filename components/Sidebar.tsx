@@ -8,7 +8,17 @@ const navItems = [
   { href: "/budget", label: "Budget", icon: "💰" },
   { href: "/budget/income", label: "Income", icon: "📈" },
   { href: "/budget/bulk", label: "Bulk Entry", icon: "📋" },
+  { href: "/budget/pending", label: "Pending", icon: "📬" },
+  { href: "/rides", label: "Rides", icon: "🏇" },
+  { href: "/calendar", label: "Calendar", icon: "📅" },
   { href: "/settings/categories", label: "Settings", icon: "⚙️" },
+  { href: "/settings/horses", label: "Horses", icon: "🐴" },
+  { href: "/settings/templates", label: "Templates", icon: "📝" },
+  { href: "/settings/weather", label: "Weather", icon: "🌤️" },
+  { href: "/settings/keywords", label: "Keywords", icon: "🔑" },
+  { href: "/settings/vendors", label: "Vendors", icon: "🏪" },
+  { href: "/settings/integrations", label: "Integrations", icon: "🔗" },
+  { href: "/settings/profile", label: "Profile", icon: "👤" },
 ];
 
 export default function Sidebar() {
