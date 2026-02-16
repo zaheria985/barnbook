@@ -17,7 +17,7 @@ export default function DeficitBanner({
   if (amount <= 0) return null;
 
   return (
-    <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3">
+    <div className="rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3">
       <div className="flex items-center gap-3">
         <svg
           width="20"

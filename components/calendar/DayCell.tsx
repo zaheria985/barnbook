@@ -3,18 +3,18 @@
 import type { Event } from "@/lib/queries/events";
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  show: "bg-purple-400",
-  vet: "bg-red-400",
-  farrier: "bg-amber-400",
-  lesson: "bg-blue-400",
-  pony_club: "bg-green-400",
-  other: "bg-gray-400",
+  show: "bg-[var(--interactive)]",
+  vet: "bg-[var(--accent-rose)]",
+  farrier: "bg-[var(--accent-amber)]",
+  lesson: "bg-[var(--accent-blue)]",
+  pony_club: "bg-[var(--accent-emerald)]",
+  other: "bg-[var(--text-muted)]",
 };
 
 const RIDE_SCORE_BORDER: Record<string, string> = {
-  green: "border-l-2 border-l-green-400",
-  yellow: "border-l-2 border-l-amber-400",
-  red: "border-l-2 border-l-red-400",
+  green: "border-l-2 border-l-[var(--accent-emerald)]",
+  yellow: "border-l-2 border-l-[var(--accent-amber)]",
+  red: "border-l-2 border-l-[var(--accent-rose)]",
 };
 
 export default function DayCell({

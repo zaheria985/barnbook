@@ -11,7 +11,7 @@ export default function RideCard({
   onDelete?: (id: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <div className="flex items-start justify-between">
         <div>
           <h3 className="font-medium text-[var(--text-primary)]">

@@ -33,14 +33,14 @@ export default function BudgetBarChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-xl border border-[var(--border-light)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
         No budget data for this month
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
         Budget vs Actual
       </h3>
@@ -52,14 +52,14 @@ export default function BudgetBarChart({
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
           <XAxis
             dataKey="category"
-            tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
+            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
             interval={0}
             angle={-45}
             textAnchor="end"
             height={80}
           />
           <YAxis
-            tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
+            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
             tickFormatter={(v) => `$${v}`}
           />
           <Tooltip
@@ -67,15 +67,17 @@ export default function BudgetBarChart({
             contentStyle={{
               backgroundColor: "var(--surface)",
               border: "1px solid var(--border-light)",
+              borderRadius: "12px",
+              color: "var(--text-primary)",
             }}
           />
           <Legend />
-          <Bar dataKey="budgeted" name="Budgeted" fill="#2d6a4f" />
-          <Bar dataKey="actual" name="Actual" fill="#8884d8">
+          <Bar dataKey="budgeted" name="Budgeted" fill="#6d5acd" />
+          <Bar dataKey="actual" name="Actual" fill="#2d9e8f">
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.overBudget ? "#991b1b" : "#52b788"}
+                fill={entry.overBudget ? "#c44569" : "#2d9e8f"}
               />
             ))}
           </Bar>

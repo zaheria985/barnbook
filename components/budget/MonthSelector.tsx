@@ -25,7 +25,7 @@ export default function MonthSelector({
   });
 
   return (
-    <div className="flex items-center justify-center gap-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
+    <div className="flex items-center justify-center gap-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
       <button
         onClick={prev}
         className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"

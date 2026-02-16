@@ -11,7 +11,7 @@ export default function SavingsCard({ balance }: { balance: number }) {
   const isPositive = balance >= 0;
 
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-5">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-[var(--text-muted)]">Horse Savings Account</p>

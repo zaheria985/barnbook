@@ -52,7 +52,7 @@ export default function CategoryCard({
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <div className="flex items-center justify-between">
         <button
           onClick={() => hasSubItems && setExpanded(!expanded)}

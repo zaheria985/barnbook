@@ -13,12 +13,12 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const EVENT_TYPE_BADGE: Record<string, string> = {
-  show: "bg-purple-100 text-purple-700",
-  vet: "bg-red-100 text-red-700",
-  farrier: "bg-amber-100 text-amber-700",
-  lesson: "bg-blue-100 text-blue-700",
-  pony_club: "bg-green-100 text-green-700",
-  other: "bg-gray-100 text-gray-700",
+  show: "bg-[var(--interactive-light)] text-[var(--interactive)]",
+  vet: "bg-[var(--error-bg)] text-[var(--error-text)]",
+  farrier: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
+  lesson: "bg-[var(--success-bg)] text-[var(--accent-blue)]",
+  pony_club: "bg-[var(--success-bg)] text-[var(--success-text)]",
+  other: "bg-[var(--surface-muted)] text-[var(--text-secondary)]",
 };
 
 export default function EventCard({ event }: { event: Event }) {

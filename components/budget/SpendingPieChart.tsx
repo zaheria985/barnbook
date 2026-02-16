@@ -9,16 +9,16 @@ interface PieData {
 }
 
 const COLORS = [
-  "#2d6a4f",
-  "#40916c",
-  "#52b788",
-  "#74c69d",
-  "#95d5b2",
-  "#b7e4c7",
-  "#d8f3dc",
-  "#1b4332",
-  "#52796f",
-  "#84a98c",
+  "#6d5acd",
+  "#c44569",
+  "#2d9e8f",
+  "#4a6fa5",
+  "#2d8659",
+  "#c48a2c",
+  "#8b6cc1",
+  "#e06080",
+  "#40c4b0",
+  "#6b92cc",
 ];
 
 export default function SpendingPieChart({
@@ -36,7 +36,7 @@ export default function SpendingPieChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-xl border border-[var(--border-light)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] text-sm text-[var(--text-muted)]">
         No spending data for this month
       </div>
     );
@@ -45,7 +45,7 @@ export default function SpendingPieChart({
   const total = chartData.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
         Spending by Category
       </h3>
@@ -56,9 +56,17 @@ export default function SpendingPieChart({
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) =>
-              `${name}: ${((percent || 0) * 100).toFixed(0)}%`
-            }
+            label={({ name, percent, x, y }) => (
+              <text
+                x={x}
+                y={y}
+                style={{ fill: "var(--text-secondary)", fontSize: 12 }}
+                textAnchor="middle"
+                dominantBaseline="central"
+              >
+                {`${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+              </text>
+            )}
             outerRadius={100}
             fill="#8884d8"
             dataKey="value"
@@ -72,6 +80,12 @@ export default function SpendingPieChart({
               `$${Number(value).toFixed(2)} (${((Number(value) / total) * 100).toFixed(1)}%)`,
               "Amount",
             ]}
+            contentStyle={{
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border-light)",
+              borderRadius: "12px",
+              color: "var(--text-primary)",
+            }}
           />
         </PieChart>
       </ResponsiveContainer>
