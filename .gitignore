@@ -12,6 +12,8 @@ public/uploads/
 .DS_Store
 Thumbs.db
 .sisyphus/
+SPEC.md
+AGENTS.md
 
 # Xcode / watchOS
 watch/Barnbook.xcodeproj/xcuserdata/
