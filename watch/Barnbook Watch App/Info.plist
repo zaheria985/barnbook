@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Barnbook reads your heart rate during rides to track fitness metrics.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Barnbook records equestrian workout sessions to your Health data.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Barnbook tracks your location during rides to measure distance traveled.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Barnbook uses motion data to detect your horse's gait (walk, trot, canter).</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+		<string>location</string>
+	</array>
+	<key>WKApplication</key>
+	<true/>
+	<key>WKWatchOnly</key>
+	<true/>
+</dict>
+</plist>
