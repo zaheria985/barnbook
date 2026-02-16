@@ -113,7 +113,7 @@ export default function PendingExpensesPage() {
       )}
 
       {pending.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">
             No pending expenses to review.
           </p>
@@ -152,7 +152,7 @@ function PendingExpenseCard({
   const [saveMapping, setSaveMapping] = useState(true);
 
   return (
-    <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+    <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="font-medium text-[var(--text-primary)]">

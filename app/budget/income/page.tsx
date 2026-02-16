@@ -38,7 +38,7 @@ function MonthSelector({
   });
 
   return (
-    <div className="flex items-center justify-center gap-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
+    <div className="flex items-center justify-center gap-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
       <button
         onClick={prev}
         className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -224,7 +224,7 @@ export default function IncomePage() {
         <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
       ) : (
         <div className="space-y-6">
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 Income Sources
@@ -316,7 +316,7 @@ export default function IncomePage() {
             )}
           </div>
 
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 Sales
@@ -410,7 +410,7 @@ export default function IncomePage() {
             )}
           </div>
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
             <div className="flex items-center justify-between text-lg font-bold">
               <span className="text-[var(--text-primary)]">Total Income + Sales (Actual)</span>
               <span className="text-[var(--text-primary)]">{formatCurrency(totalActual + totalSales)}</span>

@@ -133,7 +133,7 @@ export default function HorseProfilesPage() {
       )}
 
       {horses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">
             No horses yet. Add a horse to start tracking rides.
           </p>
@@ -143,7 +143,7 @@ export default function HorseProfilesPage() {
           {horses.map((horse) => (
             <div
               key={horse.id}
-              className="flex items-center justify-between rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-3"
+              className="flex items-center justify-between rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-3"
             >
               <div>
                 <span className="font-medium text-[var(--text-primary)]">

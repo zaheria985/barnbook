@@ -243,7 +243,7 @@ export default function CategoriesSettingsPage() {
       {showAddCategory && (
         <form
           onSubmit={handleAddCategory}
-          className="mb-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4"
+          className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4"
         >
           <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
             New Category Name
@@ -279,7 +279,7 @@ export default function CategoriesSettingsPage() {
         {categories.map((cat, idx) => (
           <div
             key={cat.id}
-            className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden"
+            className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden"
           >
             {/* Category row */}
             <div className="flex items-center gap-2 px-4 py-3">

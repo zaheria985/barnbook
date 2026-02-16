@@ -110,7 +110,7 @@ function NewEventPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
               Title
@@ -216,7 +216,7 @@ function NewEventPage() {
 
         {/* Template Selection */}
         {matchingTemplates.length > 0 && (
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Checklist Template
             </label>

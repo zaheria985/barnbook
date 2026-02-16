@@ -160,7 +160,7 @@ export default function RideEntryPage() {
       )}
 
       {horses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">
             No horses found.{" "}
             <a
@@ -223,7 +223,7 @@ export default function RideEntryPage() {
           </div>
 
           {/* Gait breakdown */}
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface-muted)] p-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface-muted)] p-4">
             <h3 className="mb-3 text-sm font-medium text-[var(--text-primary)]">
               Gait Breakdown
             </h3>
@@ -282,7 +282,7 @@ export default function RideEntryPage() {
 
           {/* Calorie/Mcal preview */}
           {gaitSum > 0 && (
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
               <h3 className="mb-2 text-sm font-medium text-[var(--text-primary)]">
                 Estimated Output
               </h3>

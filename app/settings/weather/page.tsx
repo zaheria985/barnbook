@@ -130,7 +130,7 @@ export default function WeatherSettingsPage() {
       {/* Weather Thresholds */}
       {settings && (
         <form onSubmit={handleSaveSettings} className="mb-6 space-y-4">
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">Location</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -158,7 +158,7 @@ export default function WeatherSettingsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">Thresholds</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -236,7 +236,7 @@ export default function WeatherSettingsPage() {
       )}
 
       {/* Ride Schedule */}
-      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+      <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             Ride Schedule

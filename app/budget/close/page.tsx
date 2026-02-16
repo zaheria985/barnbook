@@ -121,7 +121,7 @@ export default function MonthEndClosePage() {
       )}
 
       <div className="space-y-4">
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">Summary</h2>
 
           <div className="space-y-3">
@@ -156,7 +156,7 @@ export default function MonthEndClosePage() {
         </div>
 
         {isSurplus && (
-          <div className="rounded-xl border border-[var(--success-solid)] bg-[var(--success-bg)] p-4">
+          <div className="rounded-2xl border border-[var(--success-solid)] bg-[var(--success-bg)] p-4">
             <p className="text-[var(--success-text)]">
               Surplus of {formatCurrency(net)} will be added to the Horse Savings Account.
             </p>
@@ -164,7 +164,7 @@ export default function MonthEndClosePage() {
         )}
 
         {isDeficit && (
-          <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-bg)] p-4">
+          <div className="rounded-2xl border border-[var(--error-border)] bg-[var(--error-bg)] p-4">
             {data.savings_withdrawal > 0 && data.deficit_carryover > 0 ? (
               <p className="text-[var(--error-text)]">
                 Savings will cover {formatCurrency(data.savings_withdrawal)}, remaining{" "}
@@ -182,7 +182,7 @@ export default function MonthEndClosePage() {
           </div>
         )}
 
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface-muted)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface-muted)] p-4">
           <div className="flex justify-between">
             <span className="text-[var(--text-secondary)]">Current Savings Balance</span>
             <span className="font-medium text-[var(--text-primary)]">{formatCurrency(data.savings_balance)}</span>
@@ -197,7 +197,7 @@ export default function MonthEndClosePage() {
             Close Month
           </button>
         ) : (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-center">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-center">
             <p className="font-medium text-[var(--text-primary)]">This month is closed.</p>
             <p className="text-sm text-[var(--text-muted)]">No further edits can be made.</p>
           </div>

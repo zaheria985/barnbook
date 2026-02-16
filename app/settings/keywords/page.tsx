@@ -100,7 +100,7 @@ export default function KeywordsSettingsPage() {
       {/* Add form */}
       <form
         onSubmit={handleAdd}
-        className="mb-4 flex gap-2 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-3"
+        className="mb-4 flex gap-2 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-3"
       >
         <input
           type="text"
@@ -129,7 +129,7 @@ export default function KeywordsSettingsPage() {
 
       {/* List */}
       {keywords.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">No keywords configured.</p>
         </div>
       ) : (
@@ -137,7 +137,7 @@ export default function KeywordsSettingsPage() {
           {keywords.map((kw) => (
             <div
               key={kw.id}
-              className="flex items-center justify-between rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2.5"
+              className="flex items-center justify-between rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
                 <span className="font-medium text-sm text-[var(--text-primary)]">

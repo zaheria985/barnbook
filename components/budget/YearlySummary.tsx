@@ -128,7 +128,7 @@ export default function YearlySummary() {
         <>
           {/* YTD Summary Cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--text-muted)]">
                 {isCurrentYear ? "YTD" : "Total"} Spent
               </p>
@@ -136,7 +136,7 @@ export default function YearlySummary() {
                 {formatCurrency(ytdSpent)}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--text-muted)]">
                 {isCurrentYear ? "YTD" : "Total"} Budgeted
               </p>
@@ -144,7 +144,7 @@ export default function YearlySummary() {
                 {formatCurrency(ytdBudgeted)}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--text-muted)]">
                 {isCurrentYear ? "YTD" : "Total"} Income
               </p>
@@ -152,7 +152,7 @@ export default function YearlySummary() {
                 {formatCurrency(ytdIncome + ytdSales)}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--text-muted)]">
                 Net
               </p>
@@ -170,7 +170,7 @@ export default function YearlySummary() {
 
           {/* Monthly trend chart */}
           {chartData.length > 0 && (
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
               <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
                 Monthly Trend — {selectedYear}
               </h3>
@@ -196,9 +196,9 @@ export default function YearlySummary() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="Income" fill="#52b788" />
-                  <Bar dataKey="Budgeted" fill="#2d6a4f" />
-                  <Bar dataKey="Spent" fill="#8884d8" />
+                  <Bar dataKey="Income" fill="var(--accent-emerald)" />
+                  <Bar dataKey="Budgeted" fill="var(--accent-teal)" />
+                  <Bar dataKey="Spent" fill="var(--interactive)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -215,7 +215,7 @@ export default function YearlySummary() {
           )}
 
           {/* Monthly breakdown table */}
-          <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <h3 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
               Month-by-Month
             </h3>

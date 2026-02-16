@@ -18,9 +18,9 @@ import {
 import type { RideStats } from "@/lib/queries/rides";
 
 const GAIT_COLORS = {
-  Walk: "#34d399",
-  Trot: "#fbbf24",
-  Canter: "#fb7185",
+  Walk: "var(--gait-walk)",
+  Trot: "var(--gait-trot)",
+  Canter: "var(--gait-canter)",
 };
 
 export default function RideStatsPage() {
@@ -131,7 +131,7 @@ export default function RideStatsPage() {
           Loading stats...
         </div>
       ) : !stats || stats.total_rides === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">
             No rides in this {period}. Log some rides first!
           </p>
@@ -140,26 +140,26 @@ export default function RideStatsPage() {
         <div className="space-y-6">
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
               <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {stats.total_rides}
               </div>
               <div className="text-xs text-[var(--text-muted)]">Rides</div>
             </div>
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
               <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {Math.floor(stats.total_duration_minutes / 60)}h{" "}
                 {stats.total_duration_minutes % 60}m
               </div>
               <div className="text-xs text-[var(--text-muted)]">Total Time</div>
             </div>
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
               <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {stats.total_calories.toLocaleString()}
               </div>
               <div className="text-xs text-[var(--text-muted)]">Calories</div>
             </div>
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 text-center">
               <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {stats.total_distance_miles}
               </div>
@@ -169,7 +169,7 @@ export default function RideStatsPage() {
 
           {/* Gait pie chart */}
           {gaitPieData.length > 0 && (
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
               <h2 className="mb-4 text-sm font-medium text-[var(--text-primary)]">
                 Time per Gait
               </h2>
@@ -203,7 +203,7 @@ export default function RideStatsPage() {
 
           {/* Calories over time bar chart */}
           {calByDate.length > 0 && (
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
               <h2 className="mb-4 text-sm font-medium text-[var(--text-primary)]">
                 Calories Over Time
               </h2>
@@ -233,7 +233,7 @@ export default function RideStatsPage() {
 
           {/* Per-horse breakdown */}
           {stats.rides_by_horse.length > 0 && (
-            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
               <h2 className="mb-3 text-sm font-medium text-[var(--text-primary)]">
                 Per-Horse Breakdown
               </h2>

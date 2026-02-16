@@ -312,7 +312,7 @@ export default function BulkEntryTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden">
+      <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[var(--surface-muted)]">
             {table.getHeaderGroups().map((hg) => (

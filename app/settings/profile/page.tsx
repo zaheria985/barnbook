@@ -125,7 +125,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-6">
+      <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-6">
         {loading ? (
           <p className="text-sm text-[var(--text-muted)]">Loading...</p>
         ) : (

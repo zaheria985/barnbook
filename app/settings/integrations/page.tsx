@@ -64,7 +64,7 @@ export default function IntegrationsSettingsPage() {
 
       <div className="space-y-4">
         {/* Vikunja */}
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
@@ -111,7 +111,7 @@ export default function IntegrationsSettingsPage() {
         </div>
 
         {/* WeatherKit */}
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
@@ -139,7 +139,7 @@ export default function IntegrationsSettingsPage() {
         </div>
 
         {/* Email Ingestion */}
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">

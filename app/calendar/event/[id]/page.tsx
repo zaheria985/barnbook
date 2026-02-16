@@ -17,12 +17,12 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const EVENT_TYPE_BADGE: Record<string, string> = {
-  show: "bg-purple-100 text-purple-700",
-  vet: "bg-red-100 text-red-700",
-  farrier: "bg-amber-100 text-amber-700",
-  lesson: "bg-blue-100 text-blue-700",
-  pony_club: "bg-green-100 text-green-700",
-  other: "bg-gray-100 text-gray-700",
+  show: "bg-[var(--interactive-light)] text-[var(--interactive)]",
+  vet: "bg-[var(--error-bg)] text-[var(--error-text)]",
+  farrier: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
+  lesson: "bg-[var(--success-bg)] text-[var(--accent-blue)]",
+  pony_club: "bg-[var(--success-bg)] text-[var(--success-text)]",
+  other: "bg-[var(--surface-muted)] text-[var(--text-secondary)]",
 };
 
 export default function EventDetailPage() {
@@ -213,7 +213,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Event Details */}
-      <div className="mb-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-3">
+      <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-[var(--text-muted)]">Start</span>
@@ -257,7 +257,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* Checklist */}
-      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+      <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             Checklist
@@ -284,7 +284,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* Push to Reminders */}
-      <div className="mt-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+      <div className="mt-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">

@@ -138,7 +138,7 @@ export default function CalendarPage() {
 
       {/* 7-Day Forecast Row (when available) */}
       {rideDays.length > 0 && (
-        <div className="mb-4 overflow-x-auto rounded-xl border border-[var(--border-light)] bg-[var(--surface)]">
+        <div className="mb-4 overflow-x-auto rounded-2xl border border-[var(--border-light)] bg-[var(--surface)]">
           <div className="flex min-w-max">
             {rideDays.slice(0, 7).map((day) => {
               const scoreColor =
@@ -149,10 +149,10 @@ export default function CalendarPage() {
                   : "text-[var(--error-text)]";
               const scoreBg =
                 day.score === "green"
-                  ? "bg-green-50"
+                  ? "bg-[var(--success-bg)]"
                   : day.score === "yellow"
-                  ? "bg-amber-50"
-                  : "bg-red-50";
+                  ? "bg-[var(--warning-bg)]"
+                  : "bg-[var(--error-bg)]";
               return (
                 <div
                   key={day.date}
@@ -186,7 +186,7 @@ export default function CalendarPage() {
       )}
 
       {/* Month Navigator */}
-      <div className="mb-4 flex items-center justify-center gap-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
+      <div className="mb-4 flex items-center justify-center gap-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
         <button
           onClick={prevMonth}
           className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -208,15 +208,15 @@ export default function CalendarPage() {
       {rideDays.length > 0 && (
         <div className="mb-2 flex items-center gap-3 text-[10px] text-[var(--text-muted)]">
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-green-400 bg-green-50" />
+            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-[var(--success-text)] bg-[var(--success-bg)]" />
             Good
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-amber-400 bg-amber-50" />
+            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-[var(--warning-text)] bg-[var(--warning-bg)]" />
             Caution
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-red-400 bg-red-50" />
+            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-[var(--error-text)] bg-[var(--error-bg)]" />
             No-Go
           </span>
         </div>
@@ -228,7 +228,7 @@ export default function CalendarPage() {
           Loading calendar...
         </div>
       ) : (
-        <div className="rounded-xl border border-[var(--border-light)] overflow-hidden">
+        <div className="rounded-2xl border border-[var(--border-light)] overflow-hidden">
           <MonthGrid
             year={year}
             month={month}

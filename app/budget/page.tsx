@@ -125,7 +125,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Summary bar */}
-      <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+      <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
         <div className="flex justify-between text-sm">
           <span className="text-[var(--text-secondary)]">Total Budgeted</span>
           <span className="font-medium text-[var(--text-primary)]">

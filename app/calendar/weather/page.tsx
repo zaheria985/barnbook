@@ -89,7 +89,7 @@ export default function WeatherDashboardPage() {
         <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
           Weather Dashboard
         </h1>
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="mb-2 text-[var(--text-primary)] font-medium">
             WeatherKit Not Configured
           </p>
@@ -135,7 +135,7 @@ export default function WeatherDashboardPage() {
 
       {/* Current Conditions */}
       {forecast && (
-        <div className="mb-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
             Current Conditions
           </h2>
@@ -169,7 +169,7 @@ export default function WeatherDashboardPage() {
 
       {/* Good Riding Days */}
       {rideDays.length > 0 && (
-        <div className="mb-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
             Riding Days (7-Day)
           </h2>
@@ -209,7 +209,7 @@ export default function WeatherDashboardPage() {
 
       {/* 7-Day Forecast */}
       {forecast && forecast.daily.length > 0 && (
-        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
             7-Day Forecast
           </h2>

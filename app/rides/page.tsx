@@ -131,7 +131,7 @@ export default function RideLogPage() {
 
       {/* Summary bar */}
       {rides.length > 0 && (
-        <div className="mb-4 flex gap-4 rounded-xl border border-[var(--border-light)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+        <div className="mb-4 flex gap-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
           <div>
             <span className="text-[var(--text-muted)]">Rides:</span>{" "}
             <span className="font-medium text-[var(--text-primary)]">
@@ -158,7 +158,7 @@ export default function RideLogPage() {
           Loading rides...
         </div>
       ) : rides.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-[var(--text-muted)]">
             No rides this month. Log your first ride!
           </p>
