@@ -15,6 +15,7 @@ services:
       retries: 20
 
   app:
+    image: ${APP_IMAGE:-ghcr.io/zaheria985/barnbook:latest}
     build: .
     restart: unless-stopped
     depends_on:

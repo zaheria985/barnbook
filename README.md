@@ -60,7 +60,8 @@ cp .env.example .env
 4. Start the stack (app + PostgreSQL):
 
 ```bash
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 ```
 
 5. Open `http://localhost:3500`
@@ -99,6 +100,7 @@ services:
       retries: 20
 
   app:
+    image: ${APP_IMAGE:-ghcr.io/zaheria985/barnbook:latest}
     build: .
     restart: unless-stopped
     depends_on:
@@ -117,6 +119,13 @@ volumes:
   barnbook_data:
 ```
 
+Run it:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
 ### Option B: App-only (external PostgreSQL)
 
 If you already have a PostgreSQL server, run just the app:
@@ -124,7 +133,7 @@ If you already have a PostgreSQL server, run just the app:
 ```yaml
 services:
   app:
-    build: .
+    image: ${APP_IMAGE:-ghcr.io/zaheria985/barnbook:latest}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://user:pass@your-db-host:5432/barnbook
@@ -160,7 +169,7 @@ services:
       retries: 20
 
   app:
-    build: .
+    image: ghcr.io/zaheria985/barnbook:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -176,6 +185,18 @@ services:
 ```
 
 Replace `YOUR_UNRAID_IP` with your server's IP address (e.g. `192.168.1.100`).
+
+## Docker Image Publishing
+
+- Image: `ghcr.io/zaheria985/barnbook`
+- `latest` is published automatically from `main` via `.github/workflows/docker-publish.yml`.
+- Every publish also includes a short SHA tag.
+
+If you want to build locally instead of pulling the prebuilt image:
+
+```bash
+docker compose up --build -d
+```
 
 ## Local Dev (Without Docker)
 
