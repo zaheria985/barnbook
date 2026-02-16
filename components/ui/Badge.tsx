@@ -3,7 +3,7 @@ const variants: Record<string, string> = {
   primary: "bg-[var(--interactive-light)] text-[var(--interactive)]",
   success: "bg-[var(--success-bg)] text-[var(--success-text)]",
   warning: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  danger: "bg-red-100 text-red-700",
+  danger: "bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 
 export default function Badge({

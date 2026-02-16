@@ -46,7 +46,7 @@ export default function Modal({
       }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
-      className="w-full max-w-lg rounded-xl border border-[var(--border-light)] bg-[var(--surface)] p-0 shadow-xl backdrop:bg-[var(--overlay)]"
+      className="w-full max-w-lg rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-0 shadow-xl backdrop:bg-[var(--overlay)]"
     >
       <div className="p-6">
         {title && (
@@ -58,9 +58,9 @@ export default function Modal({
               type="button"
               onClick={onClose}
               aria-label="Close modal"
-              className="text-gray-400 hover:text-gray-600"
+              className="rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-colors"
             >
-              ✕
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
         )}
