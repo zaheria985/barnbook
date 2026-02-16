@@ -6,6 +6,8 @@ import MonthSelector from "@/components/budget/MonthSelector";
 import SavingsCard from "@/components/budget/SavingsCard";
 import DeficitBanner from "@/components/budget/DeficitBanner";
 import CategoryCard from "@/components/budget/CategoryCard";
+import SpendingPieChart from "@/components/budget/SpendingPieChart";
+import BudgetBarChart from "@/components/budget/BudgetBarChart";
 import type { CategoryOverview } from "@/lib/queries/budget-overview";
 
 function formatCurrency(n: number) {
@@ -124,6 +126,22 @@ export default function BudgetPage() {
             onBudgetEdit={handleBudgetEdit}
           />
         ))}
+      </div>
+
+      <div className="mt-6 space-y-4">
+        <SpendingPieChart
+          data={data.categories.map((c) => ({
+            category: c.category_name,
+            amount: c.spent,
+          }))}
+        />
+        <BudgetBarChart
+          data={data.categories.map((c) => ({
+            category: c.category_name,
+            budgeted: c.budgeted,
+            actual: c.spent,
+          }))}
+        />
       </div>
 
       <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
