@@ -115,10 +115,10 @@ export default function IntegrationsSettingsPage() {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                Apple WeatherKit
+                OpenWeatherMap
               </h2>
               <p className="text-sm text-[var(--text-muted)]">
-                Weather forecasts and ride-day scoring
+                Weather forecasts and ride-day scoring via OpenWeatherMap
               </p>
             </div>
             <StatusBadge
@@ -129,10 +129,7 @@ export default function IntegrationsSettingsPage() {
           {!status?.weatherkit.configured && (
             <div className="mt-3 rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
               <p className="text-xs text-[var(--text-muted)]">
-                Set <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">WEATHERKIT_TEAM_ID</code>,{" "}
-                <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">WEATHERKIT_SERVICE_ID</code>,{" "}
-                <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">WEATHERKIT_KEY_ID</code>, and{" "}
-                <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">WEATHERKIT_PRIVATE_KEY</code> to enable.
+                Set <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">OPENWEATHERMAP_API_KEY</code> environment variable to enable.
               </p>
             </div>
           )}

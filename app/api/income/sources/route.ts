@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
-  getIncomeSources,
-  createIncomeSource,
+  getIncomeCategories,
+  createIncomeCategory,
 } from "@/lib/queries/income";
 
 export async function GET() {
@@ -13,12 +13,12 @@ export async function GET() {
   }
 
   try {
-    const sources = await getIncomeSources();
-    return NextResponse.json(sources);
+    const categories = await getIncomeCategories();
+    return NextResponse.json(categories);
   } catch (error) {
-    console.error("Failed to fetch income sources:", error);
+    console.error("Failed to fetch income categories:", error);
     return NextResponse.json(
-      { error: "Failed to fetch income sources" },
+      { error: "Failed to fetch income categories" },
       { status: 500 }
     );
   }
@@ -34,17 +34,17 @@ export async function POST(request: Request) {
     const { name } = await request.json();
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
-        { error: "Source name is required" },
+        { error: "Category name is required" },
         { status: 400 }
       );
     }
 
-    const source = await createIncomeSource(name.trim());
-    return NextResponse.json(source, { status: 201 });
+    const category = await createIncomeCategory(name.trim());
+    return NextResponse.json(category, { status: 201 });
   } catch (error) {
-    console.error("Failed to create income source:", error);
+    console.error("Failed to create income category:", error);
     return NextResponse.json(
-      { error: "Failed to create income source" },
+      { error: "Failed to create income category" },
       { status: 500 }
     );
   }

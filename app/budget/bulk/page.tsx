@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import BulkEntryTable from "@/components/budget/BulkEntryTable";
+import BulkPasteEntry from "@/components/budget/BulkPasteEntry";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
 
 interface RowData {
@@ -81,11 +81,11 @@ export default function BulkEntryPage() {
           Bulk Expense Entry
         </h1>
         <p className="mt-2 text-sm text-[var(--text-muted)]">
-          Add multiple expenses at once. Paste from spreadsheet (tab-separated) or add rows manually.
+          Paste expenses one per line using: date / vendor / amount / category / notes
         </p>
       </div>
 
-      <BulkEntryTable categories={categories} onSave={handleSave} />
+      <BulkPasteEntry categories={categories} onSave={handleSave} />
     </div>
   );
 }

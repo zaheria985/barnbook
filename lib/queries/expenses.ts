@@ -150,6 +150,34 @@ export async function deleteExpense(id: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
+export interface VendorSpending {
+  vendor: string;
+  transaction_count: number;
+  total_spent: number;
+}
+
+export async function getVendorSpending(
+  yearMonth?: string
+): Promise<VendorSpending[]> {
+  const conditions = ["e.vendor IS NOT NULL"];
+  const params: string[] = [];
+
+  if (yearMonth) {
+    conditions.push(`TO_CHAR(e.date, 'YYYY-MM') = $1`);
+    params.push(yearMonth);
+  }
+
+  const res = await pool.query(
+    `SELECT e.vendor, COUNT(*)::int AS transaction_count, SUM(e.amount) AS total_spent
+     FROM expenses e
+     WHERE ${conditions.join(" AND ")}
+     GROUP BY e.vendor
+     ORDER BY SUM(e.amount) DESC`,
+    params
+  );
+  return res.rows;
+}
+
 export async function getVendorSuggestions(query: string): Promise<string[]> {
   const res = await pool.query(
     `SELECT DISTINCT vendor FROM expenses

@@ -1,7 +1,7 @@
 // Weather rules engine for ride day scoring
 // Scores each day as "green" (good), "yellow" (caution), or "red" (no-go)
 
-import type { DayForecast, CurrentWeather } from "./weatherkit";
+import type { DayForecast, CurrentWeather } from "./openweathermap";
 import type { WeatherSettings } from "./queries/weather-settings";
 
 export type RideScore = "green" | "yellow" | "red";

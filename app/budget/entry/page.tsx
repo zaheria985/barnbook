@@ -60,6 +60,24 @@ export default function QuickEntryPage() {
     return () => clearTimeout(timer);
   }, [vendor, fetchVendorSuggestions]);
 
+  async function autoCategorize(vendorName: string) {
+    if (categoryId) return; // Don't override if already set
+    try {
+      const res = await fetch(`/api/vendors/match?vendor=${encodeURIComponent(vendorName)}`);
+      if (res.ok) {
+        const match = await res.json();
+        if (match && match.category_id) {
+          setCategoryId(match.category_id);
+          if (match.sub_item_id) {
+            setSubItemId(match.sub_item_id);
+          }
+        }
+      }
+    } catch {
+      // Silently ignore - auto-categorization is a nice-to-have
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -215,7 +233,10 @@ export default function QuickEntryPage() {
             value={vendor}
             onChange={(e) => setVendor(e.target.value)}
             onFocus={() => vendorSuggestions.length > 0 && setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onBlur={() => {
+              setTimeout(() => setShowSuggestions(false), 200);
+              if (vendor.trim()) autoCategorize(vendor.trim());
+            }}
             placeholder="e.g. Farm Supply Co"
             className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)]"
           />
@@ -228,6 +249,7 @@ export default function QuickEntryPage() {
                     onMouseDown={() => {
                       setVendor(s);
                       setShowSuggestions(false);
+                      autoCategorize(s);
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
                   >

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { IncomeSource, MonthlyIncome } from "@/lib/queries/income";
+import type { IncomeCategory, MonthlyIncome } from "@/lib/queries/income";
 import type { Sale } from "@/lib/queries/sales";
-import IncomeSourceManager from "@/components/settings/IncomeSourceManager";
+import IncomeCategoryManager from "@/components/settings/IncomeCategoryManager";
 import Modal from "@/components/ui/Modal";
 
 function formatCurrency(n: number) {
@@ -58,18 +58,24 @@ function MonthSelector({
   );
 }
 
+/** Build a unique key for pending edits: categoryId or categoryId:subItemId */
+function editKey(categoryId: string, subItemId: string | null): string {
+  return subItemId ? `${categoryId}:${subItemId}` : categoryId;
+}
+
 export default function IncomePage() {
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const [sources, setSources] = useState<IncomeSource[]>([]);
+  const [categories, setCategories] = useState<IncomeCategory[]>([]);
   const [monthlyIncome, setMonthlyIncome] = useState<MonthlyIncome[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showSourceManager, setShowSourceManager] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   const [pendingEdits, setPendingEdits] = useState<
     Record<string, { projected: string; actual: string }>
@@ -83,23 +89,23 @@ export default function IncomePage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sourcesRes, incomeRes, salesRes] = await Promise.all([
+      const [categoriesRes, incomeRes, salesRes] = await Promise.all([
         fetch("/api/income/sources"),
         fetch(`/api/income/monthly?month=${month}`),
         fetch(`/api/sales?month=${month}`),
       ]);
 
-      if (!sourcesRes.ok || !incomeRes.ok || !salesRes.ok) {
+      if (!categoriesRes.ok || !incomeRes.ok || !salesRes.ok) {
         throw new Error("Failed to fetch");
       }
 
-      const [s, mi, sa] = await Promise.all([
-        sourcesRes.json(),
+      const [c, mi, sa] = await Promise.all([
+        categoriesRes.json(),
         incomeRes.json(),
         salesRes.json(),
       ]);
 
-      setSources(s);
+      setCategories(c);
       setMonthlyIncome(mi);
       setSales(sa);
     } catch {
@@ -113,30 +119,58 @@ export default function IncomePage() {
     fetchData();
   }, [fetchData]);
 
-  function getEditValues(sourceId: string) {
-    if (pendingEdits[sourceId]) return pendingEdits[sourceId];
-    const mi = monthlyIncome.find((i) => i.source_id === sourceId);
+  function toggleCategory(catId: string) {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
+  }
+
+  function getEditValues(categoryId: string, subItemId: string | null) {
+    const key = editKey(categoryId, subItemId);
+    if (pendingEdits[key]) return pendingEdits[key];
+    const mi = monthlyIncome.find(
+      (i) =>
+        i.category_id === categoryId &&
+        (subItemId ? i.sub_item_id === subItemId : i.sub_item_id === null)
+    );
     return {
       projected: String(mi?.projected_amount || 0),
       actual: String(mi?.actual_amount || 0),
     };
   }
 
-  function setEditField(sourceId: string, field: "projected" | "actual", value: string) {
-    const current = getEditValues(sourceId);
+  function setEditField(
+    categoryId: string,
+    subItemId: string | null,
+    field: "projected" | "actual",
+    value: string
+  ) {
+    const key = editKey(categoryId, subItemId);
+    const current = getEditValues(categoryId, subItemId);
     setPendingEdits((prev) => ({
       ...prev,
-      [sourceId]: { ...current, [field]: value },
+      [key]: { ...current, [field]: value },
     }));
   }
 
-  async function handleSaveIncome(sourceId: string) {
-    const vals = getEditValues(sourceId);
+  async function handleSaveIncome(categoryId: string, subItemId: string | null) {
+    const key = editKey(categoryId, subItemId);
+    const vals = getEditValues(categoryId, subItemId);
     const projected = Number(vals.projected) || 0;
     const actual = Number(vals.actual) || 0;
 
     // Skip save if nothing changed
-    const mi = monthlyIncome.find((i) => i.source_id === sourceId);
+    const mi = monthlyIncome.find(
+      (i) =>
+        i.category_id === categoryId &&
+        (subItemId ? i.sub_item_id === subItemId : i.sub_item_id === null)
+    );
     if (
       projected === Number(mi?.projected_amount || 0) &&
       actual === Number(mi?.actual_amount || 0)
@@ -150,7 +184,8 @@ export default function IncomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           yearMonth: month,
-          sourceId,
+          categoryId,
+          subItemId,
           projected,
           actual,
         }),
@@ -158,7 +193,7 @@ export default function IncomePage() {
       if (!res.ok) throw new Error("Failed to update");
       setPendingEdits((prev) => {
         const next = { ...prev };
-        delete next[sourceId];
+        delete next[key];
         return next;
       });
       await fetchData();
@@ -200,9 +235,82 @@ export default function IncomePage() {
     }
   }
 
+  /** Get income rows for a specific category */
+  function getCategoryIncome(categoryId: string): MonthlyIncome[] {
+    return monthlyIncome.filter((i) => i.category_id === categoryId);
+  }
+
+  /** Calculate totals for a category (sum of all its monthly income rows) */
+  function getCategoryTotals(categoryId: string) {
+    const rows = getCategoryIncome(categoryId);
+    return {
+      projected: rows.reduce((s, i) => s + Number(i.projected_amount), 0),
+      actual: rows.reduce((s, i) => s + Number(i.actual_amount), 0),
+    };
+  }
+
   const totalProjected = monthlyIncome.reduce((s, i) => s + Number(i.projected_amount), 0);
   const totalActual = monthlyIncome.reduce((s, i) => s + Number(i.actual_amount), 0);
   const totalSales = sales.reduce((s, sale) => s + Number(sale.amount), 0);
+
+  function renderIncomeInputs(
+    categoryId: string,
+    subItemId: string | null,
+    label: string
+  ) {
+    const vals = getEditValues(categoryId, subItemId);
+    return (
+      <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface-muted)] p-3">
+        <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">
+          {label}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+              Projected
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+                $
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={vals.projected}
+                onChange={(e) =>
+                  setEditField(categoryId, subItemId, "projected", e.target.value)
+                }
+                onBlur={() => handleSaveIncome(categoryId, subItemId)}
+                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+              Actual
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+                $
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={vals.actual}
+                onChange={(e) =>
+                  setEditField(categoryId, subItemId, "actual", e.target.value)
+                }
+                onBlur={() => handleSaveIncome(categoryId, subItemId)}
+                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -227,76 +335,79 @@ export default function IncomePage() {
           <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                Income Sources
+                Income Categories
               </h2>
               <button
-                onClick={() => setShowSourceManager(true)}
+                onClick={() => setShowCategoryManager(true)}
                 className="text-sm text-[var(--interactive)] hover:underline"
               >
-                Manage Sources
+                Manage Categories
               </button>
             </div>
 
-            {sources.length === 0 ? (
+            {categories.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">
-                No income sources. Add one via Manage Sources.
+                No income categories. Add one via Manage Categories.
               </p>
             ) : (
-              <div className="space-y-3">
-                {sources.map((source) => {
-                  const vals = getEditValues(source.id);
+              <div className="space-y-4">
+                {categories.map((cat) => {
+                  const isCollapsed = collapsedCategories.has(cat.id);
+                  const catTotals = getCategoryTotals(cat.id);
+                  const hasSubItems = cat.sub_items.length > 0;
+
                   return (
                     <div
-                      key={source.id}
-                      className="rounded-lg border border-[var(--border-light)] bg-[var(--surface-muted)] p-3"
+                      key={cat.id}
+                      className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden"
                     >
-                      <p className="mb-2 font-medium text-[var(--text-primary)]">
-                        {source.name}
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                            Projected
-                          </label>
-                          <div className="relative">
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
-                              $
-                            </span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              inputMode="decimal"
-                              value={vals.projected}
-                              onChange={(e) =>
-                                setEditField(source.id, "projected", e.target.value)
-                              }
-                              onBlur={() => handleSaveIncome(source.id)}
-                              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
-                            />
-                          </div>
+                      {/* Category header */}
+                      <button
+                        onClick={() => toggleCategory(cat.id)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-muted)] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={`text-[var(--text-muted)] transition-transform ${!isCollapsed ? "rotate-180" : ""}`}
+                          >
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                          <span className="font-medium text-[var(--text-primary)]">
+                            {cat.name}
+                          </span>
                         </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                            Actual
-                          </label>
-                          <div className="relative">
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
-                              $
-                            </span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              inputMode="decimal"
-                              value={vals.actual}
-                              onChange={(e) =>
-                                setEditField(source.id, "actual", e.target.value)
-                              }
-                              onBlur={() => handleSaveIncome(source.id)}
-                              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] py-2 pl-7 pr-3 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
-                            />
-                          </div>
+                        <div className="flex gap-4 text-sm">
+                          <span className="text-[var(--text-secondary)]">
+                            Proj: {formatCurrency(catTotals.projected)}
+                          </span>
+                          <span className="text-[var(--text-primary)]">
+                            Act: {formatCurrency(catTotals.actual)}
+                          </span>
                         </div>
-                      </div>
+                      </button>
+
+                      {/* Category body */}
+                      {!isCollapsed && (
+                        <div className="border-t border-[var(--border-light)] px-4 py-3 space-y-3">
+                          {hasSubItems ? (
+                            /* Render sub-item inputs */
+                            cat.sub_items.map((sub) =>
+                              renderIncomeInputs(cat.id, sub.id, sub.label)
+                            )
+                          ) : (
+                            /* No sub-items: category-level input */
+                            renderIncomeInputs(cat.id, null, cat.name)
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -419,8 +530,8 @@ export default function IncomePage() {
         </div>
       )}
 
-      <Modal open={showSourceManager} onClose={() => setShowSourceManager(false)} title="Manage Income Sources">
-        <IncomeSourceManager />
+      <Modal open={showCategoryManager} onClose={() => setShowCategoryManager(false)} title="Manage Income Categories">
+        <IncomeCategoryManager />
       </Modal>
     </div>
   );

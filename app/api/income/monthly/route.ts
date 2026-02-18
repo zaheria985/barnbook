@@ -37,11 +37,11 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const { yearMonth, sourceId, projected, actual } = await request.json();
+    const { yearMonth, categoryId, subItemId, projected, actual } = await request.json();
 
-    if (!yearMonth || !sourceId || projected === undefined || actual === undefined) {
+    if (!yearMonth || !categoryId || projected === undefined || actual === undefined) {
       return NextResponse.json(
-        { error: "yearMonth, sourceId, projected, and actual are required" },
+        { error: "yearMonth, categoryId, projected, and actual are required" },
         { status: 400 }
       );
     }
@@ -63,7 +63,8 @@ export async function PUT(request: NextRequest) {
 
     const income = await setMonthlyIncome(
       yearMonth,
-      sourceId,
+      categoryId,
+      subItemId || null,
       Number(projected),
       Number(actual)
     );

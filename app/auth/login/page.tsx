@@ -34,7 +34,10 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password");
       } else {
-        router.push("/budget");
+        const params = new URLSearchParams(window.location.search);
+        const callbackUrl = params.get("callbackUrl");
+        const safeUrl = callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/budget";
+        router.push(safeUrl);
       }
     } catch {
       setError("Sign in failed. Please try again.");

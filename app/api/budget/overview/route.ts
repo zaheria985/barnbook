@@ -6,6 +6,7 @@ import {
   getSavingsBalance,
   getPreviousMonthBalance,
 } from "@/lib/queries/budget-overview";
+import { getMonthlyIncome } from "@/lib/queries/income";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -22,16 +23,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [overview, savings, prevBalance] = await Promise.all([
+    const [overview, savings, prevBalance, incomeRows] = await Promise.all([
       getBudgetOverview(month),
       getSavingsBalance(),
       getPreviousMonthBalance(month),
+      getMonthlyIncome(month),
     ]);
+
+    const total_income_projected = incomeRows.reduce(
+      (sum, r) => sum + Number(r.projected_amount),
+      0
+    );
+    const total_income_actual = incomeRows.reduce(
+      (sum, r) => sum + Number(r.actual_amount),
+      0
+    );
 
     return NextResponse.json({
       ...overview,
       savings_balance: savings,
       previous_month: prevBalance,
+      total_income_projected,
+      total_income_actual,
     });
   } catch (error) {
     console.error("Failed to fetch budget overview:", error);

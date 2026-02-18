@@ -25,6 +25,7 @@ const mainItems = [
   { href: "/budget", label: "Budget", icon: IconWallet },
   { href: "/budget/income", label: "Income", icon: IconChartLine },
   { href: "/budget/bulk", label: "Bulk Entry", icon: IconTable },
+  { href: "/budget/vendors", label: "Vendors", icon: IconStore },
   { href: "/budget/pending", label: "Pending", icon: IconInbox },
   { href: "/rides", label: "Rides", icon: IconHorse },
   { href: "/calendar", label: "Calendar", icon: IconCalendar },

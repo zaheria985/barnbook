@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/weather-settings";
-import { isConfigured, getForecast } from "@/lib/weatherkit";
+import { isConfigured, getForecast } from "@/lib/openweathermap";
 
 export async function GET() {
   const session = await getServerSession(authOptions);

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as vikunja from "@/lib/vikunja";
-import * as weatherkit from "@/lib/weatherkit";
+import * as weatherkit from "@/lib/openweathermap";
 
 export async function GET() {
   const session = await getServerSession(authOptions);

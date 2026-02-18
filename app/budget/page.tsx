@@ -24,6 +24,8 @@ interface OverviewData {
   total_spent: number;
   savings_balance: number;
   previous_month: { deficit_carryover: number; is_closed: boolean } | null;
+  total_income_projected: number;
+  total_income_actual: number;
 }
 
 export default function BudgetPage() {
@@ -92,6 +94,7 @@ export default function BudgetPage() {
   }
 
   const net = data.total_budgeted - data.total_spent;
+  const netWithIncome = data.total_income_actual - data.total_spent;
 
   return (
     <div className="mx-auto max-w-3xl pb-20">
@@ -151,6 +154,39 @@ export default function BudgetPage() {
           </span>
         </div>
       </div>
+
+      {/* Income summary */}
+      {(data.total_income_projected > 0 || data.total_income_actual > 0) && (
+        <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">Income</span>
+            <Link
+              href="/budget/income"
+              className="text-xs font-medium text-[var(--interactive)] hover:underline"
+            >
+              Manage Income
+            </Link>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-[var(--text-secondary)]">Projected</span>
+            <span className="font-medium text-[var(--text-primary)]">
+              {formatCurrency(data.total_income_projected)}
+            </span>
+          </div>
+          <div className="mt-2 flex justify-between text-sm">
+            <span className="text-[var(--text-secondary)]">Actual</span>
+            <span className="font-medium text-[var(--text-primary)]">
+              {formatCurrency(data.total_income_actual)}
+            </span>
+          </div>
+          <div className="mt-3 flex justify-between border-t border-[var(--border)] pt-3 text-base font-bold">
+            <span className="text-[var(--text-primary)]">Net (Income − Spent)</span>
+            <span className={netWithIncome >= 0 ? "text-[var(--success-text)]" : "text-[var(--error-text)]"}>
+              {formatCurrency(netWithIncome)}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <SavingsCard balance={data.savings_balance} />
