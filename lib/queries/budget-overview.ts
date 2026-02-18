@@ -38,7 +38,7 @@ export async function getBudgetOverview(
      LEFT JOIN (
        SELECT category_id, SUM(budgeted_amount) AS budgeted
        FROM monthly_budgets
-       WHERE year_month = $1 AND sub_item_id IS NULL
+       WHERE year_month = $1
        GROUP BY category_id
      ) mb ON mb.category_id = bc.id
      LEFT JOIN (
