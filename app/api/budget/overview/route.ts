@@ -4,9 +4,9 @@ import { authOptions } from "@/lib/auth";
 import {
   getBudgetOverview,
   getSavingsBalance,
-  getPreviousMonthBalance,
 } from "@/lib/queries/budget-overview";
 import { getMonthlyIncome } from "@/lib/queries/income";
+import { hasDefaults } from "@/lib/queries/monthly-budgets";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [overview, savings, prevBalance, incomeRows] = await Promise.all([
+    const [overview, savings, incomeRows, hasDefaultBudgets] = await Promise.all([
       getBudgetOverview(month),
       getSavingsBalance(),
-      getPreviousMonthBalance(month),
       getMonthlyIncome(month),
+      hasDefaults(),
     ]);
 
     const total_income_projected = incomeRows.reduce(
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...overview,
       savings_balance: savings,
-      previous_month: prevBalance,
+      has_defaults: hasDefaultBudgets,
       total_income_projected,
       total_income_actual,
     });

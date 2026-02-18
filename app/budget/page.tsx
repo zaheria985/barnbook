@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import MonthSelector from "@/components/budget/MonthSelector";
 import SavingsCard from "@/components/budget/SavingsCard";
-import DeficitBanner from "@/components/budget/DeficitBanner";
+import Modal from "@/components/ui/Modal";
 import CategoryCard from "@/components/budget/CategoryCard";
 import SpendingPieChart from "@/components/budget/SpendingPieChart";
 import BudgetBarChart from "@/components/budget/BudgetBarChart";
@@ -24,7 +24,7 @@ interface OverviewData {
   total_budgeted: number;
   total_spent: number;
   savings_balance: number;
-  previous_month: { deficit_carryover: number; is_closed: boolean } | null;
+  has_defaults: boolean;
   total_income_projected: number;
   total_income_actual: number;
 }
@@ -40,6 +40,8 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showYearly, setShowYearly] = useState(false);
+  const [showApplyDefaults, setShowApplyDefaults] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -83,11 +85,25 @@ export default function BudgetPage() {
     }
   }
 
-  const prevMonthLabel = new Date(
-    Number(month.split("-")[0]),
-    Number(month.split("-")[1]) - 2,
-    1
-  ).toLocaleDateString("en-US", { month: "long" });
+  async function handleApplyDefaults(mode: "fill" | "overwrite") {
+    setApplying(true);
+    try {
+      const res = await fetch("/api/budget/monthly/apply-defaults", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, mode }),
+      });
+      if (!res.ok) throw new Error("Failed to apply defaults");
+      setShowApplyDefaults(false);
+      await fetchData();
+    } catch {
+      setError("Failed to apply defaults");
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  const monthHasBudgets = data ? data.total_budgeted > 0 : false;
 
   if (loading) {
     return (
@@ -200,12 +216,22 @@ export default function BudgetPage() {
         <SavingsCard balance={data.savings_balance} />
       </div>
 
-      {data.previous_month && data.previous_month.deficit_carryover > 0 && (
+
+      {data.has_defaults && (
         <div className="mb-6">
-          <DeficitBanner
-            amount={data.previous_month.deficit_carryover}
-            monthLabel={prevMonthLabel}
-          />
+          <button
+            onClick={() => {
+              if (monthHasBudgets) {
+                setShowApplyDefaults(true);
+              } else {
+                handleApplyDefaults("fill");
+              }
+            }}
+            disabled={applying}
+            className="w-full rounded-xl border border-dashed border-[var(--interactive)] py-3 text-sm font-medium text-[var(--interactive)] hover:bg-[var(--interactive-muted)] disabled:opacity-50 transition-colors"
+          >
+            {applying ? "Applying..." : "Apply Budget Defaults"}
+          </button>
         </div>
       )}
 
@@ -260,6 +286,41 @@ export default function BudgetPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        open={showApplyDefaults}
+        onClose={() => setShowApplyDefaults(false)}
+        title="Apply Budget Defaults"
+      >
+        <p className="mb-4 text-sm text-[var(--text-secondary)]">
+          This month already has budgets set. How would you like to apply defaults?
+        </p>
+        <div className="space-y-2">
+          <button
+            onClick={() => handleApplyDefaults("fill")}
+            disabled={applying}
+            className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-left hover:bg-[var(--surface-muted)] disabled:opacity-50"
+          >
+            <span className="font-medium text-[var(--text-primary)]">Fill Gaps</span>
+            <p className="text-xs text-[var(--text-muted)]">Only add defaults where no budget is set yet</p>
+          </button>
+          <button
+            onClick={() => handleApplyDefaults("overwrite")}
+            disabled={applying}
+            className="w-full rounded-lg border border-[var(--error-border)] px-4 py-3 text-left hover:bg-[var(--error-bg)] disabled:opacity-50"
+          >
+            <span className="font-medium text-[var(--error-text)]">Overwrite All</span>
+            <p className="text-xs text-[var(--text-muted)]">Replace all budgets with defaults</p>
+          </button>
+          <button
+            onClick={() => setShowApplyDefaults(false)}
+            disabled={applying}
+            className="w-full rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
 
       <Link
         href="/budget/entry"

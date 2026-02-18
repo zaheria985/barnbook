@@ -22,6 +22,11 @@ export default function SavingsCard({ balance }: { balance: number }) {
           >
             {formatCurrency(balance)}
           </p>
+          {!isPositive && (
+            <p className="text-xs text-[var(--error-text)]">
+              Deficit — future surpluses will recover this
+            </p>
+          )}
         </div>
         <div
           className={`flex h-12 w-12 items-center justify-center rounded-full ${

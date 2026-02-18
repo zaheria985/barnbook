@@ -101,6 +101,36 @@ export async function copyBudgetsFromDefaults(
   return 0;
 }
 
+export async function applyDefaultsToMonth(
+  yearMonth: string,
+  mode: "fill" | "overwrite"
+): Promise<number> {
+  if (mode === "overwrite") {
+    await pool.query(
+      `DELETE FROM monthly_budgets WHERE year_month = $1`,
+      [yearMonth]
+    );
+  }
+
+  const res = await pool.query(
+    `INSERT INTO monthly_budgets (year_month, category_id, sub_item_id, budgeted_amount)
+     SELECT $1, category_id, sub_item_id, budgeted_amount
+     FROM budget_defaults
+     WHERE budgeted_amount > 0
+     ON CONFLICT (year_month, category_id, sub_item_id) DO NOTHING
+     RETURNING id`,
+    [yearMonth]
+  );
+  return res.rowCount ?? 0;
+}
+
+export async function hasDefaults(): Promise<boolean> {
+  const res = await pool.query(
+    `SELECT COUNT(*) FROM budget_defaults WHERE budgeted_amount > 0`
+  );
+  return parseInt(res.rows[0].count) > 0;
+}
+
 export async function isMonthClosed(yearMonth: string): Promise<boolean> {
   const res = await pool.query(
     `SELECT is_closed FROM monthly_balances WHERE year_month = $1`,

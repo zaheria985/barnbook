@@ -43,18 +43,11 @@ export interface MonthEndCalculation {
 export async function calculateMonthEndBalance(
   yearMonth: string
 ): Promise<MonthEndCalculation> {
-  const [year, month] = yearMonth.split("-").map(Number);
-  const prevDate = new Date(year, month - 2, 1);
-  const prevMonth = `${prevDate.getFullYear()}-${String(
-    prevDate.getMonth() + 1
-  ).padStart(2, "0")}`;
-
-  const [budgets, expenses, income, sales, prevBalance] = await Promise.all([
+  const [budgets, expenses, income, sales] = await Promise.all([
     getMonthlyBudgets(yearMonth),
     getExpenses(yearMonth),
     getMonthlyIncome(yearMonth),
     getSales(yearMonth),
-    getMonthlyBalance(prevMonth),
   ]);
 
   const total_budgeted = budgets.reduce(
@@ -67,31 +60,8 @@ export async function calculateMonthEndBalance(
     0
   );
   const total_sales = sales.reduce((s, sale) => s + Number(sale.amount), 0);
-  const previous_deficit = prevBalance?.deficit_carryover || 0;
 
-  const net =
-    total_income_actual + total_sales - total_spent - previous_deficit;
-
-  let savings_contribution = 0;
-  let savings_withdrawal = 0;
-  let deficit_carryover = 0;
-
-  if (net > 0) {
-    savings_contribution = net;
-  } else if (net < 0) {
-    const savingsRes = await pool.query(
-      `SELECT balance FROM horse_savings_account LIMIT 1`
-    );
-    const savingsBalance = Number(savingsRes.rows[0]?.balance || 0);
-    const deficit = Math.abs(net);
-
-    if (savingsBalance >= deficit) {
-      savings_withdrawal = deficit;
-    } else {
-      savings_withdrawal = savingsBalance;
-      deficit_carryover = deficit - savingsBalance;
-    }
-  }
+  const net = total_income_actual + total_sales - total_spent;
 
   return {
     year_month: yearMonth,
@@ -99,11 +69,11 @@ export async function calculateMonthEndBalance(
     total_spent,
     total_income_actual,
     total_sales,
-    previous_deficit,
+    previous_deficit: 0,
     net_result: net,
-    savings_contribution,
-    savings_withdrawal,
-    deficit_carryover,
+    savings_contribution: Math.max(net, 0),
+    savings_withdrawal: Math.max(-net, 0),
+    deficit_carryover: 0,
   };
 }
 
@@ -177,15 +147,10 @@ export async function closeMonth(
       ]
     );
 
-    if (calc.savings_contribution > 0) {
+    if (calc.net_result !== 0) {
       await client.query(
         `UPDATE horse_savings_account SET balance = balance + $1, updated_at = now()`,
-        [calc.savings_contribution]
-      );
-    } else if (calc.savings_withdrawal > 0) {
-      await client.query(
-        `UPDATE horse_savings_account SET balance = balance - $1, updated_at = now()`,
-        [calc.savings_withdrawal]
+        [calc.net_result]
       );
     }
 
