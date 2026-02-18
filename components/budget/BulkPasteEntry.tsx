@@ -27,38 +27,31 @@ function generateId() {
 /** Replace common Unicode variants that break splitting and regex matching */
 function normalizeText(text: string): string {
   return text
-    .replace(/[\u00A0\u2007\u202F]/g, " ")       // non-breaking / figure / narrow nbsp → space
-    .replace(/[\u2044\u2215\uFF0F]/g, "/")        // fraction / division / fullwidth slash → /
-    .replace(/[\u2013\u2014\uFF0D]/g, "-")        // en-dash / em-dash / fullwidth hyphen → -
+    .replace(/[\uFEFF\u200B\u200C\u200D\u2060\u00AD]/g, "")  // strip zero-width/invisible
+    .replace(/[\u00A0\u2007\u202F\u2009\u200A\u205F\u3000]/g, " ")  // unicode spaces → space
+    .replace(/[\u2044\u2215\uFF0F]/g, "/")        // unicode slashes → /
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212\uFF0D]/g, "-")  // unicode dashes → -
+    .replace(/[\uFF0E]/g, ".")                     // fullwidth period → .
     .replace(/\r\n/g, "\n")                        // Windows line endings
     .replace(/\r/g, "\n");                          // old Mac line endings
 }
 
 function parseDate(raw: string): string | null {
-  const input = raw.trim();
-  const formats = [
-    /^(\d{4})-(\d{2})-(\d{2})$/,
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/,
-    /^(\d{1,2})\/(\d{1,2})$/,
-    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
-    /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
+  const input = normalizeText(raw).trim();
+  if (!input) return null;
+
+  const formats: { pattern: RegExp; extract: (m: RegExpMatchArray) => string }[] = [
+    { pattern: /^(\d{4})-(\d{2})-(\d{2})$/, extract: (m) => `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` },
+    { pattern: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, extract: (m) => `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` },
+    { pattern: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, extract: (m) => { const y = parseInt(m[3]); return `${y < 50 ? 2000 + y : 1900 + y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`; } },
+    { pattern: /^(\d{1,2})\/(\d{1,2})$/, extract: (m) => `${new Date().getFullYear()}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` },
+    { pattern: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, extract: (m) => `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` },
+    { pattern: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, extract: (m) => `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` },
   ];
-  for (const regex of formats) {
-    const match = input.match(regex);
-    if (!match) continue;
-    if (regex === formats[0]) return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
-    if (regex === formats[1] || regex === formats[4] || regex === formats[5])
-      return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-    if (regex === formats[2]) {
-      const year = parseInt(match[3]);
-      const fullYear = year < 50 ? 2000 + year : 1900 + year;
-      return `${fullYear}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-    }
-    if (regex === formats[3]) {
-      const year = new Date().getFullYear();
-      return `${year}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-    }
+
+  for (const fmt of formats) {
+    const match = input.match(fmt.pattern);
+    if (match) return fmt.extract(match);
   }
   return null;
 }
