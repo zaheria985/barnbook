@@ -27,22 +27,26 @@ export async function getBudgetOverview(
   yearMonth: string
 ): Promise<BudgetOverview> {
   const catRes = await pool.query(
-    `SELECT 
+    `SELECT
        bc.id AS category_id,
        bc.name AS category_name,
        bc.is_system,
        bc.sort_order,
-       COALESCE(SUM(mb.budgeted_amount), 0) AS budgeted,
-       COALESCE(SUM(e.spent), 0) AS spent
+       COALESCE(mb.budgeted, 0) AS budgeted,
+       COALESCE(e.spent, 0) AS spent
      FROM budget_categories bc
-     LEFT JOIN monthly_budgets mb ON mb.category_id = bc.id AND mb.year_month = $1
+     LEFT JOIN (
+       SELECT category_id, SUM(budgeted_amount) AS budgeted
+       FROM monthly_budgets
+       WHERE year_month = $1
+       GROUP BY category_id
+     ) mb ON mb.category_id = bc.id
      LEFT JOIN (
        SELECT category_id, SUM(amount) AS spent
        FROM expenses
        WHERE TO_CHAR(date, 'YYYY-MM') = $1
        GROUP BY category_id
      ) e ON e.category_id = bc.id
-     GROUP BY bc.id, bc.name, bc.is_system, bc.sort_order
      ORDER BY bc.sort_order, bc.name`,
     [yearMonth]
   );
