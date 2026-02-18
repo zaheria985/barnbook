@@ -38,7 +38,7 @@ export async function getBudgetOverview(
      LEFT JOIN (
        SELECT category_id, SUM(budgeted_amount) AS budgeted
        FROM monthly_budgets
-       WHERE year_month = $1
+       WHERE year_month = $1 AND sub_item_id IS NULL
        GROUP BY category_id
      ) mb ON mb.category_id = bc.id
      LEFT JOIN (
@@ -85,12 +85,14 @@ export async function getBudgetOverview(
 
   const categories: CategoryOverview[] = catRes.rows.map((row) => {
     const subs = subItemsByCategory.get(row.category_id) || [];
+    const catLevelBudget = Number(row.budgeted);
+    const subItemBudgetSum = subs.reduce((s, si) => s + si.budgeted, 0);
     return {
       category_id: row.category_id,
       category_name: row.category_name,
       is_system: row.is_system,
       sort_order: row.sort_order,
-      budgeted: Number(row.budgeted),
+      budgeted: subItemBudgetSum > 0 ? subItemBudgetSum : catLevelBudget,
       spent: Number(row.spent),
       sub_items: subs,
     };
