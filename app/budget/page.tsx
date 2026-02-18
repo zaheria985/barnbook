@@ -212,6 +212,13 @@ export default function BudgetPage() {
         </div>
       )}
 
+      <Link
+        href="/budget/close"
+        className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-colors"
+      >
+        Close Month <span aria-hidden="true">&rarr;</span>
+      </Link>
+
       <div className="mb-6">
         <SavingsCard balance={data.savings_balance} />
       </div>
