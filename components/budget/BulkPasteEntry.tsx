@@ -319,10 +319,11 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                   >
                     <td className="px-2 py-2">
                       <input
-                        type="date"
+                        type="text"
                         value={row.date}
                         onChange={(e) => updateRow(row.id, { date: e.target.value })}
-                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm"
+                        placeholder="YYYY-MM-DD"
+                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--input-text)]"
                       />
                     </td>
                     <td className="px-2 py-2">
@@ -330,7 +331,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                         type="text"
                         value={row.vendor}
                         onChange={(e) => updateRow(row.id, { vendor: e.target.value })}
-                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm"
+                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--input-text)]"
                       />
                     </td>
                     <td className="px-2 py-2">
@@ -339,14 +340,14 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                         step="0.01"
                         value={row.amount}
                         onChange={(e) => updateRow(row.id, { amount: e.target.value })}
-                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm"
+                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--input-text)]"
                       />
                     </td>
                     <td className="px-2 py-2">
                       <select
                         value={row.category_id}
                         onChange={(e) => updateRow(row.id, { category_id: e.target.value })}
-                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm"
+                        className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--input-text)]"
                       >
                         <option value="">Select...</option>
                         {categories.map((c) => (
@@ -359,7 +360,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                         <select
                           value={row.sub_item_id}
                           onChange={(e) => updateRow(row.id, { sub_item_id: e.target.value })}
-                          className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm"
+                          className="w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--input-text)]"
                         >
                           <option value="">Select...</option>
                           {cat.sub_items.map((s) => (
