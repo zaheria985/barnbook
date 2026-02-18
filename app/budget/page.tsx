@@ -10,6 +10,7 @@ import SpendingPieChart from "@/components/budget/SpendingPieChart";
 import BudgetBarChart from "@/components/budget/BudgetBarChart";
 import YearlySummary from "@/components/budget/YearlySummary";
 import type { CategoryOverview } from "@/lib/queries/budget-overview";
+import type { BudgetCategory } from "@/lib/queries/budget-categories";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -35,6 +36,7 @@ export default function BudgetPage() {
   });
 
   const [data, setData] = useState<OverviewData | null>(null);
+  const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showYearly, setShowYearly] = useState(false);
@@ -42,10 +44,16 @@ export default function BudgetPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/budget/overview?month=${month}`);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const json = await res.json();
+      const [overviewRes, catRes] = await Promise.all([
+        fetch(`/api/budget/overview?month=${month}`),
+        fetch("/api/budget/categories"),
+      ]);
+      if (!overviewRes.ok) throw new Error("Failed to fetch");
+      const json = await overviewRes.json();
       setData(json);
+      if (catRes.ok) {
+        setBudgetCategories(await catRes.json());
+      }
     } catch {
       setError("Failed to load budget overview");
     } finally {
@@ -201,12 +209,26 @@ export default function BudgetPage() {
         </div>
       )}
 
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Categories
+        </h2>
+        <Link
+          href={`/budget/expenses?month=${month}`}
+          className="text-xs font-medium text-[var(--interactive)] hover:underline"
+        >
+          View All Expenses
+        </Link>
+      </div>
       <div className="space-y-4">
         {data.categories.map((cat) => (
           <CategoryCard
             key={cat.category_id}
             category={cat}
+            month={month}
+            categories={budgetCategories}
             onBudgetEdit={handleBudgetEdit}
+            onExpenseChanged={fetchData}
           />
         ))}
       </div>

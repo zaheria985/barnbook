@@ -18,12 +18,14 @@ import {
   IconLink,
   IconUser,
   IconLogOut,
+  IconReceipt,
 } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const mainItems = [
   { href: "/budget", label: "Budget", icon: IconWallet },
   { href: "/budget/income", label: "Income", icon: IconChartLine },
+  { href: "/budget/expenses", label: "Expenses", icon: IconReceipt },
   { href: "/budget/bulk", label: "Bulk Entry", icon: IconTable },
   { href: "/budget/vendors", label: "Vendors", icon: IconStore },
   { href: "/budget/pending", label: "Pending", icon: IconInbox },
@@ -33,6 +35,7 @@ const mainItems = [
 
 const settingsItems = [
   { href: "/settings/categories", label: "Categories", icon: IconSliders },
+  { href: "/settings/budget-defaults", label: "Budget Defaults", icon: IconWallet },
   { href: "/settings/horses", label: "Horses", icon: IconHorse },
   { href: "/settings/templates", label: "Templates", icon: IconClipboard },
   { href: "/settings/weather", label: "Weather", icon: IconCloudSun },

@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import {
   getMonthlyBudgets,
   setMonthlyBudget,
-  copyBudgetsFromPreviousMonth,
+  copyBudgetsFromDefaults,
 } from "@/lib/queries/monthly-budgets";
 
 export async function GET(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     let budgets = await getMonthlyBudgets(month);
 
     if (budgets.length === 0) {
-      const copied = await copyBudgetsFromPreviousMonth(month);
+      const copied = await copyBudgetsFromDefaults(month);
       if (copied > 0) {
         budgets = await getMonthlyBudgets(month);
       }

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { CategoryOverview } from "@/lib/queries/budget-overview";
+import type { Expense } from "@/lib/queries/expenses";
+import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import ExpenseTable from "./ExpenseTable";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -35,50 +38,86 @@ function ProgressBar({ spent, budgeted }: { spent: number; budgeted: number }) {
 
 export default function CategoryCard({
   category,
+  month,
+  categories,
   onBudgetEdit,
+  onExpenseChanged,
 }: {
   category: CategoryOverview;
+  month?: string;
+  categories?: BudgetCategory[];
   onBudgetEdit?: (categoryId: string, amount: number) => void;
+  onExpenseChanged?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(category.budgeted));
 
-  const hasSubItems = category.sub_items.length > 0;
+  const [expenses, setExpenses] = useState<Expense[] | null>(null);
+  const [loadingExpenses, setLoadingExpenses] = useState(false);
+
+  const fetchExpenses = useCallback(async () => {
+    if (!month) return;
+    setLoadingExpenses(true);
+    try {
+      const res = await fetch(
+        `/api/expenses?month=${month}&category=${category.category_id}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setExpenses(data);
+    } catch {
+      setExpenses([]);
+    } finally {
+      setLoadingExpenses(false);
+    }
+  }, [month, category.category_id]);
+
+  function handleToggle() {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && expenses === null && month) {
+      fetchExpenses();
+    }
+  }
 
   function handleSave() {
     onBudgetEdit?.(category.category_id, Number(editValue) || 0);
     setEditing(false);
   }
 
+  function handleExpenseChanged() {
+    fetchExpenses();
+    onExpenseChanged?.();
+  }
+
+  const hasSubItems = category.sub_items.length > 0;
+
   return (
     <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => hasSubItems && setExpanded(!expanded)}
+          onClick={handleToggle}
           className="flex items-center gap-2 text-left"
-          disabled={!hasSubItems}
         >
           <span className="font-semibold text-[var(--text-primary)]">
             {category.category_name}
           </span>
-          {hasSubItems && (
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`text-[var(--text-muted)] transition-transform ${
-                expanded ? "rotate-180" : ""
-              }`}
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          )}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`text-[var(--text-muted)] transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
         </button>
 
         <div className="text-right">
@@ -130,32 +169,64 @@ export default function CategoryCard({
 
       <ProgressBar spent={category.spent} budgeted={category.budgeted} />
 
-      {expanded && hasSubItems && (
-        <div className="mt-4 space-y-2 border-t border-[var(--border-light)] pt-3">
-          {category.sub_items.map((sub) => (
-            <div
-              key={sub.sub_item_id}
-              className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2"
-            >
-              <span className="text-sm text-[var(--text-secondary)]">
-                {sub.sub_item_label}
-              </span>
-              <div className="text-right">
-                <p className="text-xs text-[var(--text-muted)]">
-                  {formatCurrency(sub.budgeted)}
-                </p>
-                <p
-                  className={`text-sm ${
-                    sub.spent > sub.budgeted
-                      ? "text-[var(--error-text)]"
-                      : "text-[var(--text-primary)]"
-                  }`}
+      {expanded && (
+        <div className="mt-4 border-t border-[var(--border-light)] pt-3">
+          {/* Sub-item aggregates */}
+          {hasSubItems && (
+            <div className="space-y-2 mb-3">
+              {category.sub_items.map((sub) => (
+                <div
+                  key={sub.sub_item_id}
+                  className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2"
                 >
-                  {formatCurrency(sub.spent)}
-                </p>
-              </div>
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    {sub.sub_item_label}
+                  </span>
+                  <div className="text-right">
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {formatCurrency(sub.budgeted)}
+                    </p>
+                    <p
+                      className={`text-sm ${
+                        sub.spent > sub.budgeted
+                          ? "text-[var(--error-text)]"
+                          : "text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {formatCurrency(sub.spent)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Expenses section */}
+          {month && categories && (
+            <>
+              {hasSubItems && (
+                <div className="mb-3 border-t border-[var(--border-light)]" />
+              )}
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                Expenses
+              </p>
+              {loadingExpenses ? (
+                <p className="py-2 text-center text-sm text-[var(--text-muted)]">
+                  Loading...
+                </p>
+              ) : expenses && expenses.length > 0 ? (
+                <ExpenseTable
+                  expenses={expenses}
+                  categories={categories}
+                  onChanged={handleExpenseChanged}
+                />
+              ) : (
+                <p className="py-2 text-center text-sm text-[var(--text-muted)]">
+                  No expenses recorded
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

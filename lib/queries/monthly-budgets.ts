@@ -68,15 +68,9 @@ export async function setMonthlyBudget(
   return res.rows[0];
 }
 
-export async function copyBudgetsFromPreviousMonth(
+export async function copyBudgetsFromDefaults(
   yearMonth: string
 ): Promise<number> {
-  const [year, month] = yearMonth.split("-").map(Number);
-  const prevDate = new Date(year, month - 2, 1);
-  const prevMonth = `${prevDate.getFullYear()}-${String(
-    prevDate.getMonth() + 1
-  ).padStart(2, "0")}`;
-
   const existingCount = await pool.query(
     `SELECT COUNT(*) FROM monthly_budgets WHERE year_month = $1`,
     [yearMonth]
@@ -86,16 +80,25 @@ export async function copyBudgetsFromPreviousMonth(
     return 0;
   }
 
-  const res = await pool.query(
-    `INSERT INTO monthly_budgets (year_month, category_id, sub_item_id, budgeted_amount)
-     SELECT $1, category_id, sub_item_id, budgeted_amount
-     FROM monthly_budgets
-     WHERE year_month = $2
-     RETURNING id`,
-    [yearMonth, prevMonth]
+  // Try to copy from budget_defaults template
+  const defaultsExist = await pool.query(
+    `SELECT COUNT(*) FROM budget_defaults WHERE budgeted_amount > 0`
   );
 
-  return res.rowCount ?? 0;
+  if (parseInt(defaultsExist.rows[0].count) > 0) {
+    const res = await pool.query(
+      `INSERT INTO monthly_budgets (year_month, category_id, sub_item_id, budgeted_amount)
+       SELECT $1, category_id, sub_item_id, budgeted_amount
+       FROM budget_defaults
+       WHERE budgeted_amount > 0
+       RETURNING id`,
+      [yearMonth]
+    );
+    return res.rowCount ?? 0;
+  }
+
+  // No defaults — leave empty
+  return 0;
 }
 
 export async function isMonthClosed(yearMonth: string): Promise<boolean> {
