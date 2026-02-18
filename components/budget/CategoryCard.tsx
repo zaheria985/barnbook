@@ -46,7 +46,7 @@ export default function CategoryCard({
   category: CategoryOverview;
   month?: string;
   categories?: BudgetCategory[];
-  onBudgetEdit?: (categoryId: string, amount: number) => void;
+  onBudgetEdit?: (categoryId: string, amount: number, subItemId?: string | null) => void;
   onExpenseChanged?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -82,7 +82,10 @@ export default function CategoryCard({
   }
 
   function handleSave() {
-    onBudgetEdit?.(category.category_id, Number(editValue) || 0);
+    // If category has exactly one sub-item, route the budget to that sub-item
+    // to prevent double-counting category-level + sub-item rows
+    const subId = category.sub_items.length === 1 ? category.sub_items[0].sub_item_id : null;
+    onBudgetEdit?.(category.category_id, Number(editValue) || 0, subId);
     setEditing(false);
   }
 

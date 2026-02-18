@@ -83,15 +83,23 @@ export async function getBudgetOverview(
     subItemsByCategory.set(row.category_id, list);
   }
 
-  const categories: CategoryOverview[] = catRes.rows.map((row) => ({
-    category_id: row.category_id,
-    category_name: row.category_name,
-    is_system: row.is_system,
-    sort_order: row.sort_order,
-    budgeted: Number(row.budgeted),
-    spent: Number(row.spent),
-    sub_items: subItemsByCategory.get(row.category_id) || [],
-  }));
+  const categories: CategoryOverview[] = catRes.rows.map((row) => {
+    const subs = subItemsByCategory.get(row.category_id) || [];
+    // For categories with sub-items, derive budget from sub-item totals
+    // to prevent double-counting category-level + sub-item rows
+    const budgeted = subs.length > 0
+      ? subs.reduce((s, sub) => s + sub.budgeted, 0)
+      : Number(row.budgeted);
+    return {
+      category_id: row.category_id,
+      category_name: row.category_name,
+      is_system: row.is_system,
+      sort_order: row.sort_order,
+      budgeted,
+      spent: Number(row.spent),
+      sub_items: subs,
+    };
+  });
 
   const total_budgeted = categories.reduce((s, c) => s + c.budgeted, 0);
   const total_spent = categories.reduce((s, c) => s + c.spent, 0);
