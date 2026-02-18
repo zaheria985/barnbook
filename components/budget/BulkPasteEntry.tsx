@@ -23,27 +23,40 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
-function parseDate(input: string): string | null {
+/** Replace common Unicode variants that break splitting and regex matching */
+function normalizeText(text: string): string {
+  return text
+    .replace(/[\u00A0\u2007\u202F]/g, " ")       // non-breaking / figure / narrow nbsp → space
+    .replace(/[\u2044\u2215\uFF0F]/g, "/")        // fraction / division / fullwidth slash → /
+    .replace(/[\u2013\u2014\uFF0D]/g, "-")        // en-dash / em-dash / fullwidth hyphen → -
+    .replace(/\r\n/g, "\n")                        // Windows line endings
+    .replace(/\r/g, "\n");                          // old Mac line endings
+}
+
+function parseDate(raw: string): string | null {
+  const input = raw.trim();
   const formats = [
     /^(\d{4})-(\d{2})-(\d{2})$/,
     /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
     /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/,
     /^(\d{1,2})\/(\d{1,2})$/,
+    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+    /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
   ];
   for (const regex of formats) {
     const match = input.match(regex);
-    if (match) {
-      if (regex === formats[0]) return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
-      if (regex === formats[1]) return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-      if (regex === formats[2]) {
-        const year = parseInt(match[3]);
-        const fullYear = year < 50 ? 2000 + year : 1900 + year;
-        return `${fullYear}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-      }
-      if (regex === formats[3]) {
-        const year = new Date().getFullYear();
-        return `${year}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
-      }
+    if (!match) continue;
+    if (regex === formats[0]) return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+    if (regex === formats[1] || regex === formats[4] || regex === formats[5])
+      return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+    if (regex === formats[2]) {
+      const year = parseInt(match[3]);
+      const fullYear = year < 50 ? 2000 + year : 1900 + year;
+      return `${fullYear}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+    }
+    if (regex === formats[3]) {
+      const year = new Date().getFullYear();
+      return `${year}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
     }
   }
   return null;
@@ -81,7 +94,8 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
   }, []);
 
   const handleParse = async () => {
-    const lines = pasteText.trim().split("\n").filter((line) => line.trim());
+    const normalized = normalizeText(pasteText);
+    const lines = normalized.trim().split("\n").filter((line) => line.trim());
     if (lines.length === 0) return;
 
     const parsed: RowData[] = [];
@@ -89,21 +103,45 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
 
     for (const line of lines) {
       const parts = line.split(" / ").map((p) => p.trim());
-      const [rawDate, vendor, rawAmount, categoryName, notes] = parts;
+      const [rawDate, vendor, rawAmount, categoryName] = parts;
 
       const date = parseDate(rawDate || "");
       const id = generateId();
 
-      // Try to match category by name if provided
+      // Match category by name
       let categoryId = "";
-      const subItemId = "";
-      if (categoryName) {
-        const cat = categories.find(
-          (c) => c.name.toLowerCase() === categoryName.toLowerCase()
-        );
-        if (cat) {
-          categoryId = cat.id;
+      let subItemId = "";
+      let notesValue = "";
+      const matchedCat = categoryName
+        ? categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase())
+        : undefined;
+
+      if (matchedCat) {
+        categoryId = matchedCat.id;
+
+        if (parts.length >= 6) {
+          // 6+ fields: date / vendor / amount / category / sub-item / notes
+          const subItemName = parts[4];
+          const sub = matchedCat.sub_items.find(
+            (s) => s.label.toLowerCase() === subItemName.toLowerCase()
+          );
+          if (sub) subItemId = sub.id;
+          notesValue = parts.slice(5).join(" / ");
+        } else if (parts.length === 5) {
+          // 5 fields: check if 5th is a sub-item name, otherwise treat as notes
+          const field5 = parts[4];
+          const sub = matchedCat.sub_items.find(
+            (s) => s.label.toLowerCase() === field5.toLowerCase()
+          );
+          if (sub) {
+            subItemId = sub.id;
+          } else {
+            notesValue = field5;
+          }
         }
+      } else {
+        // No category match — 5th field is notes
+        if (parts.length >= 5) notesValue = parts.slice(4).join(" / ");
       }
 
       const errors: string[] = [];
@@ -118,7 +156,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
         sub_item_id: subItemId,
         vendor: vendor || "",
         amount: rawAmount || "",
-        notes: notes || "",
+        notes: notesValue,
         errors: errors.length > 0 ? errors : undefined,
       });
 
@@ -137,13 +175,13 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
 
       try {
         await Promise.all(
-          Array.from(vendorSet).map(async (vendor) => {
+          Array.from(vendorSet).map(async (v) => {
             try {
-              const res = await fetch(`/api/vendors/match?vendor=${encodeURIComponent(vendor)}`);
+              const res = await fetch(`/api/vendors/match?vendor=${encodeURIComponent(v)}`);
               if (res.ok) {
                 const match = await res.json();
                 if (match && match.category_id) {
-                  vendorMatches.set(vendor, {
+                  vendorMatches.set(v, {
                     category_id: match.category_id,
                     sub_item_id: match.sub_item_id || null,
                   });
@@ -219,10 +257,12 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
             onChange={(e) => setPasteText(e.target.value)}
             placeholder={
               "Paste expenses one per line:\n\n" +
-              "12/15 / Tractor Supply / 45.99 / Feed / hay and grain\n" +
-              "12/16 / Rural King / 23.50 / Supplies\n" +
-              "12/17 / Vet Clinic / 150.00\n\n" +
-              "Format: date / vendor / amount / category (optional) / notes (optional)"
+              "02/15/2025 / Tractor Supply / 45.99 / Feed / Hay Delivery / grain order\n" +
+              "2/16 / Rural King / 23.50 / Supplies\n" +
+              "02/17/25 / Vet Clinic / 150.00\n\n" +
+              "Format: date / vendor / amount / category / sub-item / notes\n" +
+              "Category, sub-item, and notes are optional.\n" +
+              "Dates: M/D, M/D/YY, M/D/YYYY, or YYYY-MM-DD"
             }
             rows={12}
             className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--interactive)] focus:outline-none focus:ring-1 focus:ring-[var(--interactive)]"
