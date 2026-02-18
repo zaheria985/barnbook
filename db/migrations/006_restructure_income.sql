@@ -1,8 +1,6 @@
 -- 006_restructure_income.sql
 -- Restructure income from flat sources to category/sub-item hierarchy
 
-BEGIN;
-
 -- 1. Rename income_sources → income_categories
 ALTER TABLE income_sources RENAME TO income_categories;
 
@@ -34,8 +32,3 @@ ALTER TABLE monthly_income DROP COLUMN source_id;
 
 -- 7. Add new unique constraint
 CREATE UNIQUE INDEX idx_monthly_income_unique ON monthly_income(year_month, category_id, COALESCE(sub_item_id, '00000000-0000-0000-0000-000000000000'));
-
--- Record migration
-INSERT INTO schema_migrations (version) VALUES ('006') ON CONFLICT DO NOTHING;
-
-COMMIT;
