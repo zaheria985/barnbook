@@ -67,7 +67,7 @@ export default function BudgetPage() {
     fetchData();
   }, [fetchData]);
 
-  async function handleBudgetEdit(categoryId: string, amount: number, subItemId?: string | null) {
+  async function handleBudgetEdit(categoryId: string, amount: number) {
     try {
       const res = await fetch("/api/budget/monthly", {
         method: "PUT",
@@ -75,7 +75,6 @@ export default function BudgetPage() {
         body: JSON.stringify({
           yearMonth: month,
           categoryId,
-          subItemId: subItemId || null,
           amount,
         }),
       });
