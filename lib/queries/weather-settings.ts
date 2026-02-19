@@ -10,6 +10,9 @@ export interface WeatherSettings {
   heat_alert_temp_f: number;
   wind_cutoff_mph: number;
   has_indoor_arena: boolean;
+  footing_caution_inches: number;
+  footing_danger_inches: number;
+  footing_dry_hours_per_inch: number;
   updated_at: string;
 }
 
@@ -17,7 +20,8 @@ export async function getSettings(): Promise<WeatherSettings | null> {
   const res = await pool.query(
     `SELECT id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
             cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
-            has_indoor_arena, updated_at
+            has_indoor_arena, footing_caution_inches, footing_danger_inches,
+            footing_dry_hours_per_inch, updated_at
      FROM weather_settings
      LIMIT 1`
   );
@@ -33,6 +37,9 @@ export async function updateSettings(data: {
   heat_alert_temp_f?: number;
   wind_cutoff_mph?: number;
   has_indoor_arena?: boolean;
+  footing_caution_inches?: number;
+  footing_danger_inches?: number;
+  footing_dry_hours_per_inch?: number;
 }): Promise<WeatherSettings> {
   const fields: string[] = [];
   const values: (number | boolean | null)[] = [];
@@ -70,6 +77,18 @@ export async function updateSettings(data: {
     fields.push(`has_indoor_arena = $${idx++}`);
     values.push(data.has_indoor_arena);
   }
+  if (data.footing_caution_inches !== undefined) {
+    fields.push(`footing_caution_inches = $${idx++}`);
+    values.push(data.footing_caution_inches);
+  }
+  if (data.footing_danger_inches !== undefined) {
+    fields.push(`footing_danger_inches = $${idx++}`);
+    values.push(data.footing_danger_inches);
+  }
+  if (data.footing_dry_hours_per_inch !== undefined) {
+    fields.push(`footing_dry_hours_per_inch = $${idx++}`);
+    values.push(data.footing_dry_hours_per_inch);
+  }
 
   if (fields.length === 0) {
     const existing = await getSettings();
@@ -83,7 +102,8 @@ export async function updateSettings(data: {
      WHERE id = (SELECT id FROM weather_settings LIMIT 1)
      RETURNING id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
                cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
-               has_indoor_arena, updated_at`,
+               has_indoor_arena, footing_caution_inches, footing_danger_inches,
+               footing_dry_hours_per_inch, updated_at`,
     values
   );
   return res.rows[0];

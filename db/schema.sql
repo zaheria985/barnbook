@@ -222,11 +222,14 @@ CREATE TABLE IF NOT EXISTS weather_settings (
   location_lat DECIMAL(9,6),
   location_lng DECIMAL(9,6),
   rain_cutoff_inches DECIMAL(4,2) NOT NULL DEFAULT 0.25,
-  rain_window_hours INTEGER NOT NULL DEFAULT 4,
+  rain_window_hours INTEGER NOT NULL DEFAULT 48,
   cold_alert_temp_f INTEGER NOT NULL DEFAULT 25,
   heat_alert_temp_f INTEGER NOT NULL DEFAULT 95,
   wind_cutoff_mph INTEGER NOT NULL DEFAULT 30,
   has_indoor_arena BOOLEAN NOT NULL DEFAULT false,
+  footing_caution_inches DECIMAL(4,2) NOT NULL DEFAULT 0.25,
+  footing_danger_inches DECIMAL(4,2) NOT NULL DEFAULT 0.75,
+  footing_dry_hours_per_inch INTEGER NOT NULL DEFAULT 60,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

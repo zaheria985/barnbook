@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/weather-settings";
-import { isConfigured, getForecast } from "@/lib/openweathermap";
+import { isConfigured, getForecast, getRecentRain } from "@/lib/openweathermap";
 import { scoreDays } from "@/lib/weather-rules";
 
 export async function GET() {
@@ -27,12 +27,18 @@ export async function GET() {
       );
     }
 
-    const forecast = await getForecast(
-      Number(settings.location_lat),
-      Number(settings.location_lng)
-    );
+    const lat = Number(settings.location_lat);
+    const lng = Number(settings.location_lng);
 
-    const scored = scoreDays(forecast.daily, settings);
+    const [forecast, recentRain] = await Promise.all([
+      getForecast(lat, lng),
+      getRecentRain(lat, lng, settings.rain_window_hours).catch((err) => {
+        console.error("Failed to fetch recent rain (footing scoring degraded):", err);
+        return [];
+      }),
+    ]);
+
+    const scored = scoreDays(forecast.daily, settings, recentRain, forecast.current);
     return NextResponse.json(scored);
   } catch (error) {
     console.error("Failed to score ride days:", error);

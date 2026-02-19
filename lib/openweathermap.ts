@@ -24,6 +24,8 @@ export interface DayForecast {
   precipitation_chance: number;
   precipitation_inches: number;
   wind_speed_mph: number;
+  clouds_pct: number;
+  humidity_pct: number;
   condition: string;
   sunrise: string;
   sunset: string;
@@ -34,9 +36,18 @@ export interface WeatherForecast {
   daily: DayForecast[];
 }
 
+export interface HourlyRain {
+  hour: Date;
+  rain_inches: number;
+}
+
 // In-memory cache with 15-minute TTL
 const cache: Map<string, { data: WeatherForecast; expires: number }> = new Map();
 const CACHE_TTL = 15 * 60 * 1000;
+
+// Timemachine cache with 24-hour TTL (historical weather is immutable)
+const timemachineCache: Map<string, { data: HourlyRain[]; expires: number }> = new Map();
+const TIMEMACHINE_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export function isConfigured(): boolean {
   return !!process.env.OPENWEATHERMAP_API_KEY;
@@ -112,11 +123,72 @@ function transformResponse(raw: any): WeatherForecast {
         precipitation_chance: Math.round((d.pop ?? 0) * 100),
         precipitation_inches: mmToInches(dailyPrecipMm),
         wind_speed_mph: Math.round(d.wind_speed ?? 0),
+        clouds_pct: d.clouds ?? 0,
+        humidity_pct: d.humidity ?? 0,
         condition: d.weather?.[0]?.main ?? "Unknown",
         sunrise: d.sunrise ? new Date(d.sunrise * 1000).toISOString() : "",
         sunset: d.sunset ? new Date(d.sunset * 1000).toISOString() : "",
       };
     }),
   };
+}
+async function fetchTimemachineDay(
+  lat: number,
+  lng: number,
+  date: Date
+): Promise<HourlyRain[]> {
+  const dateKey = date.toISOString().split("T")[0];
+  const cacheKey = `tm:${lat},${lng}:${dateKey}`;
+  const cached = timemachineCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
+  const key = process.env.OPENWEATHERMAP_API_KEY!;
+  const dt = Math.floor(date.getTime() / 1000);
+  const url = `https://api.openweathermap.org/data/3.0/onecall/timemachine?lat=${lat}&lon=${lng}&dt=${dt}&units=imperial&appid=${key}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error(`Timemachine API error for ${dateKey}: ${res.status}`);
+    return [];
+  }
+
+  const raw = await res.json();
+  const hourly: HourlyRain[] = (raw.data || []).map((h: any) => ({
+    hour: new Date(h.dt * 1000),
+    rain_inches: mmToInches((h.rain?.["1h"] ?? 0) + (h.snow?.["1h"] ?? 0)),
+  }));
+
+  timemachineCache.set(cacheKey, { data: hourly, expires: Date.now() + TIMEMACHINE_CACHE_TTL });
+  return hourly;
+}
+
+export async function getRecentRain(
+  lat: number,
+  lng: number,
+  windowHours: number
+): Promise<HourlyRain[]> {
+  if (!isConfigured()) {
+    throw new Error("OpenWeatherMap not configured");
+  }
+
+  const now = new Date();
+  const results: HourlyRain[] = [];
+
+  // Fetch day-before-yesterday and yesterday via timemachine
+  for (let daysAgo = 2; daysAgo >= 1; daysAgo--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - daysAgo);
+    date.setHours(12, 0, 0, 0); // noon for the timemachine timestamp
+    const hourly = await fetchTimemachineDay(lat, lng, date);
+    results.push(...hourly);
+  }
+
+  // Filter to only the requested window
+  const cutoff = new Date(now.getTime() - windowHours * 60 * 60 * 1000);
+  return results
+    .filter((h) => h.hour >= cutoff)
+    .sort((a, b) => a.hour.getTime() - b.hour.getTime());
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

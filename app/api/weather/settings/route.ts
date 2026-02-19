@@ -35,6 +35,9 @@ export async function PUT(request: NextRequest) {
       heat_alert_temp_f: body.heat_alert_temp_f !== undefined ? Number(body.heat_alert_temp_f) : undefined,
       wind_cutoff_mph: body.wind_cutoff_mph !== undefined ? Number(body.wind_cutoff_mph) : undefined,
       has_indoor_arena: body.has_indoor_arena !== undefined ? body.has_indoor_arena : undefined,
+      footing_caution_inches: body.footing_caution_inches !== undefined ? Number(body.footing_caution_inches) : undefined,
+      footing_danger_inches: body.footing_danger_inches !== undefined ? Number(body.footing_danger_inches) : undefined,
+      footing_dry_hours_per_inch: body.footing_dry_hours_per_inch !== undefined ? Number(body.footing_dry_hours_per_inch) : undefined,
     });
     return NextResponse.json(settings);
   } catch (error) {

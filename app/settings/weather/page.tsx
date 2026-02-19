@@ -60,6 +60,9 @@ export default function WeatherSettingsPage() {
           heat_alert_temp_f: settings.heat_alert_temp_f,
           wind_cutoff_mph: settings.wind_cutoff_mph,
           has_indoor_arena: settings.has_indoor_arena,
+          footing_caution_inches: settings.footing_caution_inches,
+          footing_danger_inches: settings.footing_danger_inches,
+          footing_dry_hours_per_inch: settings.footing_dry_hours_per_inch,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -221,6 +224,50 @@ export default function WeatherSettingsPage() {
                 <label htmlFor="indoor-arena" className="text-sm font-medium text-[var(--text-secondary)]">
                   Has Indoor Arena
                 </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4 space-y-4">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Footing Conditions</h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              Tracks ground moisture from recent rain to estimate arena footing safety.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Caution Threshold (inches)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={settings.footing_caution_inches}
+                  onChange={(e) => setSettings({ ...settings, footing_caution_inches: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Danger Threshold (inches)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={settings.footing_danger_inches}
+                  onChange={(e) => setSettings({ ...settings, footing_danger_inches: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Drying Rate (hours per inch)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={settings.footing_dry_hours_per_inch}
+                  onChange={(e) => setSettings({ ...settings, footing_dry_hours_per_inch: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                />
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  How many hours for 1 inch of rain to dry in average conditions. Lower = faster drying arena.
+                </p>
               </div>
             </div>
           </div>
