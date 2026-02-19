@@ -75,7 +75,11 @@ export default function WeatherDashboardPage() {
         }
 
         if (forecastRes.ok) setForecast(await forecastRes.json());
-        if (rideDaysRes.ok) setRideDays(await rideDaysRes.json());
+        let scored: ScoredDay[] = [];
+        if (rideDaysRes.ok) {
+          scored = await rideDaysRes.json();
+          setRideDays(scored);
+        }
         if (alertsRes.ok) setAlerts(await alertsRes.json());
 
         // Check if we need yesterday's feedback
@@ -84,14 +88,12 @@ export default function WeatherDashboardPage() {
         if (feedbackRes.ok) {
           const { feedback } = await feedbackRes.json();
           if (!feedback) {
-            // No feedback yet - check if we have a prediction snapshot
-            const scored = rideDaysRes.ok ? await rideDaysRes.clone().json() : [];
             const yesterdayScored = scored.find(
-              (d: ScoredDay) => d.date === yesterday
+              (d) => d.date === yesterday
             );
             if (yesterdayScored) {
               const footingReason = yesterdayScored.reasons.find(
-                (r: string) => r.startsWith("Footing")
+                (r) => r.startsWith("Footing")
               );
               setYesterdayPrediction(
                 footingReason ? yesterdayScored.score : "green"
