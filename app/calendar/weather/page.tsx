@@ -283,7 +283,7 @@ export default function WeatherDashboardPage() {
                     })}
                   </span>
                   <span className="ml-2 text-xs opacity-75">
-                    {day.forecast.high_f}&deg;/{day.forecast.low_f}&deg;F
+                    {day.forecast.day_f}&deg;F
                   </span>
                 </div>
                 <div className="text-right">

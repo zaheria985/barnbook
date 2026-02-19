@@ -119,36 +119,56 @@ function formatTime12h(time: string): string {
   return m === 0 ? `${h12} ${suffix}` : `${h12}:${m.toString().padStart(2, "0")} ${suffix}`;
 }
 
-function checkHourlyRainForSlots(
+function checkDaytimeRain(
   dayDate: string,
+  forecast: DayForecast,
   hourly: HourlyForecast[],
   rideSlots: RideSlot[],
   settings: WeatherSettings
 ): { skipDailyRain: boolean; reasons: string[]; score: RideScore } {
-  const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
-  const slotsForDay = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
-
-  if (slotsForDay.length === 0) {
-    // No ride slots for this day - fall back to daily aggregate
-    return { skipDailyRain: false, reasons: [], score: "green" };
-  }
-
   // Filter hourly data to this day
   const dayHourly = hourly.filter((h) => h.hour.startsWith(dayDate));
   if (dayHourly.length === 0) {
     return { skipDailyRain: false, reasons: [], score: "green" };
   }
 
+  // Filter to daytime hours (sunrise to sunset)
+  const sunriseHour = forecast.sunrise ? new Date(forecast.sunrise).getHours() : 6;
+  const sunsetHour = forecast.sunset ? new Date(forecast.sunset).getHours() : 20;
+  const daytimeHourly = dayHourly.filter((h) => {
+    const hour = new Date(h.hour).getHours();
+    return hour >= sunriseHour && hour < sunsetHour;
+  });
+
+  if (daytimeHourly.length === 0) {
+    return { skipDailyRain: true, reasons: [], score: "green" };
+  }
+
   const reasons: string[] = [];
   let score: RideScore = "green";
+
+  // Daytime aggregate rain check
+  const daytimeRain = daytimeHourly.reduce((sum, h) => sum + h.rain_inches, 0);
+  const daytimeMaxPop = Math.max(...daytimeHourly.map((h) => h.pop));
+
+  if (daytimeRain >= settings.rain_cutoff_inches) {
+    score = escalate(score, "red");
+    reasons.push(`Rain: ${daytimeRain}" expected during daytime`);
+  } else if (daytimeMaxPop > 0.6) {
+    score = escalate(score, "yellow");
+    reasons.push(`${Math.round(daytimeMaxPop * 100)}% chance of daytime rain`);
+  }
+
+  // Slot-specific rain reasons (if ride slots exist for this day)
+  const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
+  const slotsForDay = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
 
   for (const slot of slotsForDay) {
     const startHour = parseInt(slot.start_time.split(":")[0], 10);
     const endHour = parseInt(slot.end_time.split(":")[0], 10);
     const slotLabel = `${formatTime12h(slot.start_time)}-${formatTime12h(slot.end_time)}`;
 
-    // Get hourly entries that fall within this ride slot
-    const slotHourly = dayHourly.filter((h) => {
+    const slotHourly = daytimeHourly.filter((h) => {
       const hour = new Date(h.hour).getHours();
       return hour >= startHour && hour < endHour;
     });
@@ -167,7 +187,6 @@ function checkHourlyRainForSlots(
     }
   }
 
-  // We checked ride slots with hourly data - skip daily aggregate rain check
   return { skipDailyRain: true, reasons, score };
 }
 
@@ -186,10 +205,10 @@ export function scoreDays(
   }
 
   return forecasts.map((f, i) => {
-    // For days 0-1 with hourly data and ride slots, use time-aware rain scoring
+    // For days 0-1 with hourly data, filter rain to daytime (sunrise-sunset)
     let scored: ScoredDay;
-    if (i <= 1 && hourly && hourly.length > 0 && rideSlots && rideSlots.length > 0) {
-      const hourlyResult = checkHourlyRainForSlots(f.date, hourly, rideSlots, settings);
+    if (i <= 1 && hourly && hourly.length > 0) {
+      const hourlyResult = checkDaytimeRain(f.date, f, hourly, rideSlots ?? [], settings);
       scored = scoreDay(f, settings, hourlyResult.skipDailyRain);
       if (hourlyResult.reasons.length > 0) {
         scored.score = escalate(scored.score, hourlyResult.score);
@@ -247,22 +266,28 @@ export function scoreDay(
     }
   }
 
-  // Cold check
-  if (forecast.low_f <= settings.cold_alert_temp_f) {
+  // Cold check (daytime temp for ride scoring)
+  if (forecast.day_f <= settings.cold_alert_temp_f) {
     score = escalate(score, "red");
-    reasons.push(`Cold: low of ${forecast.low_f}\u00B0F`);
-  } else if (forecast.low_f <= settings.cold_alert_temp_f + 10) {
+    reasons.push(`Cold: ${forecast.day_f}\u00B0F daytime`);
+  } else if (forecast.day_f <= settings.cold_alert_temp_f + 10) {
     score = escalate(score, "yellow");
-    reasons.push(`Chilly: low of ${forecast.low_f}\u00B0F`);
+    reasons.push(`Chilly: ${forecast.day_f}\u00B0F daytime`);
   }
 
-  // Heat check
-  if (forecast.high_f >= settings.heat_alert_temp_f) {
+  // Heat check (daytime temp for ride scoring)
+  if (forecast.day_f >= settings.heat_alert_temp_f) {
     score = escalate(score, "red");
-    reasons.push(`Heat: high of ${forecast.high_f}\u00B0F`);
-  } else if (forecast.high_f >= settings.heat_alert_temp_f - 10) {
+    reasons.push(`Heat: ${forecast.day_f}\u00B0F daytime`);
+  } else if (forecast.day_f >= settings.heat_alert_temp_f - 10) {
     score = escalate(score, "yellow");
-    reasons.push(`Warm: high of ${forecast.high_f}\u00B0F`);
+    reasons.push(`Warm: ${forecast.day_f}\u00B0F daytime`);
+  }
+
+  // Blanket check (overnight low — informational only, never red)
+  if (forecast.low_f <= settings.cold_alert_temp_f) {
+    score = escalate(score, "yellow");
+    reasons.push(`Overnight low ${forecast.low_f}\u00B0F \u2014 blanket needed`);
   }
 
   // Wind check

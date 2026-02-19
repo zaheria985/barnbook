@@ -19,6 +19,7 @@ export interface CurrentWeather extends WeatherConditions {
 
 export interface DayForecast {
   date: string;
+  day_f: number;
   high_f: number;
   low_f: number;
   precipitation_chance: number;
@@ -135,6 +136,7 @@ function transformResponse(raw: any): WeatherForecast {
 
       return {
         date: d.dt ? new Date(d.dt * 1000).toISOString().split("T")[0] : "",
+        day_f: Math.round(d.temp?.day ?? d.temp?.max ?? 0),
         high_f: Math.round(d.temp?.max ?? 0),
         low_f: Math.round(d.temp?.min ?? 0),
         precipitation_chance: Math.round((d.pop ?? 0) * 100),

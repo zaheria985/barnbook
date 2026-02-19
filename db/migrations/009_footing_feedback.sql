@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS weather_prediction_snapshots (
   reasons TEXT[] NOT NULL DEFAULT '{}',
   predicted_moisture DECIMAL(5,2),
   predicted_hours_to_dry INTEGER,
+  forecast_day_f INTEGER,
   forecast_high_f INTEGER,
   forecast_rain_inches DECIMAL(4,2),
   forecast_clouds_pct INTEGER,
