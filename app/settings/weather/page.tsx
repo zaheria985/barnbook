@@ -15,6 +15,11 @@ export default function WeatherSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
 
+  // Accuracy stats
+  const [accuracy, setAccuracy] = useState<{
+    total: number; correct: number; accuracy_pct: number | null;
+  } | null>(null);
+
   // Schedule modal
   const [slotModalOpen, setSlotModalOpen] = useState(false);
   const [slotDay, setSlotDay] = useState(0);
@@ -29,6 +34,11 @@ export default function WeatherSettingsPage() {
       ]);
       if (settingsRes.ok) setSettings(await settingsRes.json());
       if (scheduleRes.ok) setSchedule(await scheduleRes.json());
+      // Fetch accuracy stats (non-blocking)
+      fetch("/api/footing-feedback/accuracy")
+        .then((r) => r.ok ? r.json() : null)
+        .then((stats) => { if (stats) setAccuracy(stats); })
+        .catch(() => {});
     } catch {
       setError("Failed to load settings");
     } finally {
@@ -63,6 +73,7 @@ export default function WeatherSettingsPage() {
           footing_caution_inches: settings.footing_caution_inches,
           footing_danger_inches: settings.footing_danger_inches,
           footing_dry_hours_per_inch: settings.footing_dry_hours_per_inch,
+          auto_tune_drying_rate: settings.auto_tune_drying_rate,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -257,18 +268,51 @@ export default function WeatherSettingsPage() {
                 />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Drying Rate (hours per inch)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium text-[var(--text-secondary)]">
+                    Drying Rate{settings.auto_tune_drying_rate ? " (auto)" : ""} (hours per inch)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, auto_tune_drying_rate: !settings.auto_tune_drying_rate })}
+                    className="text-xs text-[var(--interactive)] hover:underline"
+                  >
+                    {settings.auto_tune_drying_rate ? "Switch to manual" : "Switch to auto"}
+                  </button>
+                </div>
                 <input
                   type="number"
                   min="1"
                   value={settings.footing_dry_hours_per_inch}
                   onChange={(e) => setSettings({ ...settings, footing_dry_hours_per_inch: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                  readOnly={settings.auto_tune_drying_rate}
+                  className={`w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)] ${settings.auto_tune_drying_rate ? "opacity-60 cursor-not-allowed" : ""}`}
                 />
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  How many hours for 1 inch of rain to dry in average conditions. Lower = faster drying arena.
+                  {settings.auto_tune_drying_rate
+                    ? "Adjusts based on your footing feedback."
+                    : "How many hours for 1 inch of rain to dry in average conditions. Lower = faster drying arena."}
                 </p>
+                {settings.last_tuned_at && settings.auto_tune_drying_rate && (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Last adjusted: {new Date(settings.last_tuned_at).toLocaleDateString()}
+                  </p>
+                )}
               </div>
+              {accuracy && (
+                <div className="col-span-2">
+                  <p className="text-sm font-medium text-[var(--text-secondary)] mb-1">Prediction Accuracy</p>
+                  {accuracy.accuracy_pct !== null ? (
+                    <p className="text-sm text-[var(--text-primary)]">
+                      {accuracy.accuracy_pct}% ({accuracy.correct}/{accuracy.total} correct)
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[var(--text-muted)] italic">
+                      Not enough data (need 5+ feedbacks, have {accuracy.total})
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

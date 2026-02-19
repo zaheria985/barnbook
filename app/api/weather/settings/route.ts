@@ -38,6 +38,7 @@ export async function PUT(request: NextRequest) {
       footing_caution_inches: body.footing_caution_inches !== undefined ? Number(body.footing_caution_inches) : undefined,
       footing_danger_inches: body.footing_danger_inches !== undefined ? Number(body.footing_danger_inches) : undefined,
       footing_dry_hours_per_inch: body.footing_dry_hours_per_inch !== undefined ? Number(body.footing_dry_hours_per_inch) : undefined,
+      auto_tune_drying_rate: body.auto_tune_drying_rate !== undefined ? body.auto_tune_drying_rate : undefined,
     });
     return NextResponse.json(settings);
   } catch (error) {

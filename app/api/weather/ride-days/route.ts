@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSettings } from "@/lib/queries/weather-settings";
 import { isConfigured, getForecast, getRecentRain } from "@/lib/openweathermap";
-import { scoreDays } from "@/lib/weather-rules";
+import { scoreDays, estimateMoisture, estimateFutureMoisture } from "@/lib/weather-rules";
+import { getSchedule } from "@/lib/queries/ride-schedule";
+import { upsertSnapshot, pruneSnapshots } from "@/lib/queries/weather-snapshots";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -30,15 +32,36 @@ export async function GET() {
     const lat = Number(settings.location_lat);
     const lng = Number(settings.location_lng);
 
-    const [forecast, recentRain] = await Promise.all([
+    const [forecast, recentRain, rideSlots] = await Promise.all([
       getForecast(lat, lng),
       getRecentRain(lat, lng, settings.rain_window_hours).catch((err) => {
         console.error("Failed to fetch recent rain (footing scoring degraded):", err);
         return [];
       }),
+      getSchedule().catch(() => []),
     ]);
 
-    const scored = scoreDays(forecast.daily, settings, recentRain, forecast.current);
+    const scored = scoreDays(
+      forecast.daily, settings, recentRain, forecast.current,
+      forecast.hourly, rideSlots
+    );
+
+    // Fire-and-forget: snapshot predictions + prune old snapshots
+    const todayMoisture = recentRain.length > 0
+      ? estimateMoisture(recentRain, forecast.current, forecast.daily, settings)
+      : null;
+    Promise.all([
+      ...scored.map((day, i) => {
+        const moisture = i === 0
+          ? todayMoisture
+          : todayMoisture
+            ? estimateFutureMoisture(todayMoisture.current_moisture, i, forecast.daily, settings)
+            : null;
+        return upsertSnapshot(day, moisture, settings.footing_dry_hours_per_inch);
+      }),
+      pruneSnapshots(),
+    ]).catch((err) => console.error("Snapshot upsert failed:", err));
+
     return NextResponse.json(scored);
   } catch (error) {
     console.error("Failed to score ride days:", error);

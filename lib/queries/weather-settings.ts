@@ -13,6 +13,8 @@ export interface WeatherSettings {
   footing_caution_inches: number;
   footing_danger_inches: number;
   footing_dry_hours_per_inch: number;
+  auto_tune_drying_rate: boolean;
+  last_tuned_at: string | null;
   updated_at: string;
 }
 
@@ -21,7 +23,7 @@ export async function getSettings(): Promise<WeatherSettings | null> {
     `SELECT id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
             cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
             has_indoor_arena, footing_caution_inches, footing_danger_inches,
-            footing_dry_hours_per_inch, updated_at
+            footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at, updated_at
      FROM weather_settings
      LIMIT 1`
   );
@@ -40,9 +42,11 @@ export async function updateSettings(data: {
   footing_caution_inches?: number;
   footing_danger_inches?: number;
   footing_dry_hours_per_inch?: number;
+  auto_tune_drying_rate?: boolean;
+  last_tuned_at?: Date | null;
 }): Promise<WeatherSettings> {
   const fields: string[] = [];
-  const values: (number | boolean | null)[] = [];
+  const values: (number | boolean | Date | null)[] = [];
   let idx = 1;
 
   if (data.location_lat !== undefined) {
@@ -89,6 +93,14 @@ export async function updateSettings(data: {
     fields.push(`footing_dry_hours_per_inch = $${idx++}`);
     values.push(data.footing_dry_hours_per_inch);
   }
+  if (data.auto_tune_drying_rate !== undefined) {
+    fields.push(`auto_tune_drying_rate = $${idx++}`);
+    values.push(data.auto_tune_drying_rate);
+  }
+  if (data.last_tuned_at !== undefined) {
+    fields.push(`last_tuned_at = $${idx++}`);
+    values.push(data.last_tuned_at);
+  }
 
   if (fields.length === 0) {
     const existing = await getSettings();
@@ -103,7 +115,7 @@ export async function updateSettings(data: {
      RETURNING id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
                cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
                has_indoor_arena, footing_caution_inches, footing_danger_inches,
-               footing_dry_hours_per_inch, updated_at`,
+               footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at, updated_at`,
     values
   );
   return res.rows[0];

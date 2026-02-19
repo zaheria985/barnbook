@@ -1,8 +1,9 @@
 // Weather rules engine for ride day scoring
 // Scores each day as "green" (good), "yellow" (caution), or "red" (no-go)
 
-import type { DayForecast, CurrentWeather, HourlyRain } from "./openweathermap";
+import type { DayForecast, CurrentWeather, HourlyRain, HourlyForecast } from "./openweathermap";
 import type { WeatherSettings } from "./queries/weather-settings";
+import type { RideSlot } from "./queries/ride-schedule";
 
 export type RideScore = "green" | "yellow" | "red";
 
@@ -106,11 +107,77 @@ export function estimateFutureMoisture(
   };
 }
 
+function escalate(current: RideScore, to: RideScore): RideScore {
+  const rank = { green: 0, yellow: 1, red: 2 };
+  return rank[to] > rank[current] ? to : current;
+}
+
+function formatTime12h(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${h12} ${suffix}` : `${h12}:${m.toString().padStart(2, "0")} ${suffix}`;
+}
+
+function checkHourlyRainForSlots(
+  dayDate: string,
+  hourly: HourlyForecast[],
+  rideSlots: RideSlot[],
+  settings: WeatherSettings
+): { skipDailyRain: boolean; reasons: string[]; score: RideScore } {
+  const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
+  const slotsForDay = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
+
+  if (slotsForDay.length === 0) {
+    // No ride slots for this day - fall back to daily aggregate
+    return { skipDailyRain: false, reasons: [], score: "green" };
+  }
+
+  // Filter hourly data to this day
+  const dayHourly = hourly.filter((h) => h.hour.startsWith(dayDate));
+  if (dayHourly.length === 0) {
+    return { skipDailyRain: false, reasons: [], score: "green" };
+  }
+
+  const reasons: string[] = [];
+  let score: RideScore = "green";
+
+  for (const slot of slotsForDay) {
+    const startHour = parseInt(slot.start_time.split(":")[0], 10);
+    const endHour = parseInt(slot.end_time.split(":")[0], 10);
+    const slotLabel = `${formatTime12h(slot.start_time)}-${formatTime12h(slot.end_time)}`;
+
+    // Get hourly entries that fall within this ride slot
+    const slotHourly = dayHourly.filter((h) => {
+      const hour = new Date(h.hour).getHours();
+      return hour >= startHour && hour < endHour;
+    });
+
+    if (slotHourly.length === 0) continue;
+
+    const totalRain = slotHourly.reduce((sum, h) => sum + h.rain_inches, 0);
+    const maxPop = Math.max(...slotHourly.map((h) => h.pop));
+
+    if (totalRain >= settings.rain_cutoff_inches) {
+      score = escalate(score, "red");
+      reasons.push(`Rain during your ${slotLabel} slot: ${totalRain}" expected`);
+    } else if (maxPop > 0.6) {
+      score = escalate(score, "yellow");
+      reasons.push(`${Math.round(maxPop * 100)}% rain chance during ${slotLabel}`);
+    }
+  }
+
+  // We checked ride slots with hourly data - skip daily aggregate rain check
+  return { skipDailyRain: true, reasons, score };
+}
+
 export function scoreDays(
   forecasts: DayForecast[],
   settings: WeatherSettings,
   recentRain?: HourlyRain[],
-  currentWeather?: CurrentWeather
+  currentWeather?: CurrentWeather,
+  hourly?: HourlyForecast[],
+  rideSlots?: RideSlot[]
 ): ScoredDay[] {
   // Calculate today's moisture if we have rain data
   let todayMoisture: MoistureEstimate | undefined;
@@ -119,7 +186,18 @@ export function scoreDays(
   }
 
   return forecasts.map((f, i) => {
-    const scored = scoreDay(f, settings);
+    // For days 0-1 with hourly data and ride slots, use time-aware rain scoring
+    let scored: ScoredDay;
+    if (i <= 1 && hourly && hourly.length > 0 && rideSlots && rideSlots.length > 0) {
+      const hourlyResult = checkHourlyRainForSlots(f.date, hourly, rideSlots, settings);
+      scored = scoreDay(f, settings, hourlyResult.skipDailyRain);
+      if (hourlyResult.reasons.length > 0) {
+        scored.score = escalate(scored.score, hourlyResult.score);
+        scored.reasons.unshift(...hourlyResult.reasons);
+      }
+    } else {
+      scored = scoreDay(f, settings);
+    }
 
     // Add footing check
     if (todayMoisture && currentWeather) {
@@ -130,12 +208,12 @@ export function scoreDays(
       if (moisture.current_moisture >= settings.footing_danger_inches) {
         scored.score = escalate(scored.score, "red");
         scored.reasons.unshift(
-          `Footing unsafe \u2014 ${moisture.current_moisture}\u201D moisture, ~${moisture.hours_to_dry}h to dry`
+          `Footing unsafe \u2014 ${moisture.current_moisture}\u2033 moisture, ~${moisture.hours_to_dry}h to dry`
         );
       } else if (moisture.current_moisture >= settings.footing_caution_inches) {
         scored.score = escalate(scored.score, "yellow");
         scored.reasons.unshift(
-          `Footing soft \u2014 ${moisture.current_moisture}\u201D moisture, ~${moisture.hours_to_dry}h to dry`
+          `Footing soft \u2014 ${moisture.current_moisture}\u2033 moisture, ~${moisture.hours_to_dry}h to dry`
         );
       }
     }
@@ -150,43 +228,41 @@ export function scoreDays(
   });
 }
 
-function escalate(current: RideScore, to: RideScore): RideScore {
-  const rank = { green: 0, yellow: 1, red: 2 };
-  return rank[to] > rank[current] ? to : current;
-}
-
 export function scoreDay(
   forecast: DayForecast,
-  settings: WeatherSettings
+  settings: WeatherSettings,
+  skipRainCheck = false
 ): ScoredDay {
   const reasons: string[] = [];
   let score: RideScore = "green";
 
-  // Rain check
-  if (forecast.precipitation_inches >= settings.rain_cutoff_inches) {
-    score = escalate(score, "red");
-    reasons.push(`Rain: ${forecast.precipitation_inches}" expected`);
-  } else if (forecast.precipitation_chance > 60) {
-    score = escalate(score, "yellow");
-    reasons.push(`${forecast.precipitation_chance}% chance of rain`);
+  // Rain check (skipped when hourly time-aware check handled it)
+  if (!skipRainCheck) {
+    if (forecast.precipitation_inches >= settings.rain_cutoff_inches) {
+      score = escalate(score, "red");
+      reasons.push(`Rain: ${forecast.precipitation_inches}" expected`);
+    } else if (forecast.precipitation_chance > 60) {
+      score = escalate(score, "yellow");
+      reasons.push(`${forecast.precipitation_chance}% chance of rain`);
+    }
   }
 
   // Cold check
   if (forecast.low_f <= settings.cold_alert_temp_f) {
     score = escalate(score, "red");
-    reasons.push(`Cold: low of ${forecast.low_f}°F`);
+    reasons.push(`Cold: low of ${forecast.low_f}\u00B0F`);
   } else if (forecast.low_f <= settings.cold_alert_temp_f + 10) {
     score = escalate(score, "yellow");
-    reasons.push(`Chilly: low of ${forecast.low_f}°F`);
+    reasons.push(`Chilly: low of ${forecast.low_f}\u00B0F`);
   }
 
   // Heat check
   if (forecast.high_f >= settings.heat_alert_temp_f) {
     score = escalate(score, "red");
-    reasons.push(`Heat: high of ${forecast.high_f}°F`);
+    reasons.push(`Heat: high of ${forecast.high_f}\u00B0F`);
   } else if (forecast.high_f >= settings.heat_alert_temp_f - 10) {
     score = escalate(score, "yellow");
-    reasons.push(`Warm: high of ${forecast.high_f}°F`);
+    reasons.push(`Warm: high of ${forecast.high_f}\u00B0F`);
   }
 
   // Wind check
@@ -198,7 +274,7 @@ export function scoreDay(
     reasons.push(`Breezy: ${forecast.wind_speed_mph} mph`);
   }
 
-  // Indoor arena override: red→yellow if indoor available
+  // Indoor arena override: red\u2192yellow if indoor available
   if (score === "red" && settings.has_indoor_arena) {
     const onlyWeatherIssue = reasons.every(
       (r) => r.startsWith("Rain:") || r.startsWith("Wind:") || r.includes("chance of rain")
@@ -225,13 +301,13 @@ export function getAlerts(
   if (current.temperature_f <= settings.cold_alert_temp_f) {
     alerts.push({
       type: "cold",
-      message: `Current temp ${current.temperature_f}°F — consider blanketing`,
+      message: `Current temp ${current.temperature_f}\u00B0F \u2014 consider blanketing`,
       severity: "red",
     });
   } else if (current.temperature_f <= settings.cold_alert_temp_f + 10) {
     alerts.push({
       type: "blanket",
-      message: `Temp dropping to ${current.temperature_f}°F — check blanket needs`,
+      message: `Temp dropping to ${current.temperature_f}\u00B0F \u2014 check blanket needs`,
       severity: "yellow",
     });
   }
@@ -239,7 +315,7 @@ export function getAlerts(
   if (current.temperature_f >= settings.heat_alert_temp_f) {
     alerts.push({
       type: "heat",
-      message: `Current temp ${current.temperature_f}°F — limit exercise, ensure water access`,
+      message: `Current temp ${current.temperature_f}\u00B0F \u2014 limit exercise, ensure water access`,
       severity: "red",
     });
   }
@@ -247,7 +323,7 @@ export function getAlerts(
   if (current.wind_speed_mph >= settings.wind_cutoff_mph) {
     alerts.push({
       type: "wind",
-      message: `Wind at ${current.wind_speed_mph} mph — secure loose items`,
+      message: `Wind at ${current.wind_speed_mph} mph \u2014 secure loose items`,
       severity: "red",
     });
   }
@@ -255,7 +331,7 @@ export function getAlerts(
   if (current.precipitation_inches > 0) {
     alerts.push({
       type: "rain",
-      message: `Active precipitation — footing may be affected`,
+      message: `Active precipitation \u2014 footing may be affected`,
       severity: "yellow",
     });
   }

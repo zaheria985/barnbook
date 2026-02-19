@@ -41,6 +41,12 @@ interface Forecast {
   }>;
 }
 
+function getYesterdayDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split("T")[0];
+}
+
 export default function WeatherDashboardPage() {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [rideDays, setRideDays] = useState<ScoredDay[]>([]);
@@ -48,6 +54,11 @@ export default function WeatherDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState("");
+
+  // Yesterday feedback prompt
+  const [yesterdayPrediction, setYesterdayPrediction] = useState<string | null>(null);
+  const [showYesterdayPrompt, setShowYesterdayPrompt] = useState(false);
+  const [yesterdaySubmitted, setYesterdaySubmitted] = useState(false);
 
   useEffect(() => {
     async function fetchAll() {
@@ -66,6 +77,29 @@ export default function WeatherDashboardPage() {
         if (forecastRes.ok) setForecast(await forecastRes.json());
         if (rideDaysRes.ok) setRideDays(await rideDaysRes.json());
         if (alertsRes.ok) setAlerts(await alertsRes.json());
+
+        // Check if we need yesterday's feedback
+        const yesterday = getYesterdayDate();
+        const feedbackRes = await fetch(`/api/footing-feedback?date=${yesterday}`);
+        if (feedbackRes.ok) {
+          const { feedback } = await feedbackRes.json();
+          if (!feedback) {
+            // No feedback yet - check if we have a prediction snapshot
+            const scored = rideDaysRes.ok ? await rideDaysRes.clone().json() : [];
+            const yesterdayScored = scored.find(
+              (d: ScoredDay) => d.date === yesterday
+            );
+            if (yesterdayScored) {
+              const footingReason = yesterdayScored.reasons.find(
+                (r: string) => r.startsWith("Footing")
+              );
+              setYesterdayPrediction(
+                footingReason ? yesterdayScored.score : "green"
+              );
+              setShowYesterdayPrompt(true);
+            }
+          }
+        }
       } catch {
         setError("Failed to load weather data");
       } finally {
@@ -116,6 +150,65 @@ export default function WeatherDashboardPage() {
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
+        </div>
+      )}
+
+      {/* Yesterday Footing Feedback */}
+      {showYesterdayPrompt && !yesterdaySubmitted && (
+        <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Yesterday&apos;s footing was predicted{" "}
+              <span className={`font-medium ${
+                yesterdayPrediction === "red" ? "text-[var(--error-text)]"
+                  : yesterdayPrediction === "yellow" ? "text-[var(--warning-text)]"
+                  : "text-[var(--success-text)]"
+              }`}>
+                {yesterdayPrediction === "red" ? "Unsafe" : yesterdayPrediction === "yellow" ? "Caution" : "Good"}
+              </span>. How was it?
+            </p>
+            <button
+              onClick={() => setShowYesterdayPrompt(false)}
+              className="text-xs text-[var(--text-muted)] hover:underline ml-2"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="mt-2 flex gap-2">
+            {(["good", "soft", "unsafe"] as const).map((rating) => {
+              const styles = {
+                good: "border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
+                soft: "border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
+                unsafe: "border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
+              };
+              return (
+                <button
+                  key={rating}
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/footing-feedback", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          date: getYesterdayDate(),
+                          actual_footing: rating,
+                        }),
+                      });
+                    } catch { /* non-critical */ }
+                    setYesterdaySubmitted(true);
+                  }}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium hover:opacity-80 transition-opacity ${styles[rating]}`}
+                >
+                  {rating.charAt(0).toUpperCase() + rating.slice(1)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {yesterdaySubmitted && (
+        <div className="mb-4 rounded-lg border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-2 text-sm text-[var(--success-text)]">
+          Footing feedback recorded. Thanks!
         </div>
       )}
 

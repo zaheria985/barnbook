@@ -36,12 +36,25 @@ function previewMcal(
   return Math.round(mcal * 100) / 100;
 }
 
+function isRecentDate(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const d = new Date(dateStr + "T00:00:00");
+  return d >= yesterday && d <= today;
+}
+
 export default function RideEntryPage() {
   const router = useRouter();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Post-ride footing feedback state
+  const [savedRide, setSavedRide] = useState<{ id: string; date: string } | null>(null);
+  const [footingSubmitted, setFootingSubmitted] = useState(false);
 
   // Form state
   const [horseId, setHorseId] = useState("");
@@ -127,7 +140,14 @@ export default function RideEntryPage() {
         throw new Error(data.error || "Failed to save ride");
       }
 
-      router.push("/rides");
+      const rideData = await res.json();
+
+      // Show footing prompt for today/yesterday rides, otherwise redirect
+      if (isRecentDate(date)) {
+        setSavedRide({ id: rideData.id, date });
+      } else {
+        router.push("/rides");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save ride");
     } finally {
@@ -138,6 +158,73 @@ export default function RideEntryPage() {
   if (loading) {
     return (
       <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
+    );
+  }
+
+  async function handleFootingFeedback(rating: "good" | "soft" | "unsafe") {
+    if (!savedRide) return;
+    try {
+      await fetch("/api/footing-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: savedRide.date,
+          ride_session_id: savedRide.id,
+          actual_footing: rating,
+        }),
+      });
+    } catch {
+      // Non-critical - don't block navigation
+    }
+    setFootingSubmitted(true);
+    setTimeout(() => router.push("/rides"), 800);
+  }
+
+  // Show footing prompt after ride save
+  if (savedRide) {
+    return (
+      <div className="mx-auto max-w-lg pb-20">
+        <div className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] p-6 text-center">
+          <p className="mb-4 text-lg font-medium text-[var(--success-text)]">
+            Ride logged!
+          </p>
+          {footingSubmitted ? (
+            <p className="text-sm text-[var(--text-muted)]">Thanks! Redirecting...</p>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-[var(--text-secondary)]">
+                How was the footing today?
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => handleFootingFeedback("good")}
+                  className="rounded-full border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-2 text-sm font-medium text-[var(--success-text)] hover:opacity-80 transition-opacity"
+                >
+                  Good
+                </button>
+                <button
+                  onClick={() => handleFootingFeedback("soft")}
+                  className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-2 text-sm font-medium text-[var(--warning-text)] hover:opacity-80 transition-opacity"
+                >
+                  Soft
+                </button>
+                <button
+                  onClick={() => handleFootingFeedback("unsafe")}
+                  className="rounded-full border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-2 text-sm font-medium text-[var(--error-text)] hover:opacity-80 transition-opacity"
+                >
+                  Unsafe
+                </button>
+              </div>
+              <button
+                onClick={() => router.push("/rides")}
+                className="mt-3 text-xs text-[var(--text-muted)] hover:underline"
+              >
+                Skip
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     );
   }
 

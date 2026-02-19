@@ -31,9 +31,16 @@ export interface DayForecast {
   sunset: string;
 }
 
+export interface HourlyForecast {
+  hour: string; // ISO timestamp
+  pop: number; // 0-1 probability of precipitation
+  rain_inches: number;
+}
+
 export interface WeatherForecast {
   current: CurrentWeather;
   daily: DayForecast[];
+  hourly: HourlyForecast[];
 }
 
 export interface HourlyRain {
@@ -92,6 +99,7 @@ function mmToInches(mm: number): number {
 function transformResponse(raw: any): WeatherForecast {
   const cw = raw.current || {};
   const fd = raw.daily || [];
+  const fh = raw.hourly || [];
 
   // Rain/snow come in mm; convert to inches
   const currentRainMm = cw.rain?.["1h"] ?? 0;
@@ -111,6 +119,15 @@ function transformResponse(raw: any): WeatherForecast {
       uv_index: Math.round(cw.uvi ?? 0),
       as_of: cw.dt ? new Date(cw.dt * 1000).toISOString() : new Date().toISOString(),
     },
+    hourly: fh.map((h: any) => {
+      const rainMm = h.rain?.["1h"] ?? 0;
+      const snowMm = h.snow?.["1h"] ?? 0;
+      return {
+        hour: h.dt ? new Date(h.dt * 1000).toISOString() : "",
+        pop: h.pop ?? 0,
+        rain_inches: mmToInches(rainMm + snowMm),
+      };
+    }),
     daily: fd.map((d: any) => {
       const dailyRainMm = d.rain ?? 0;
       const dailySnowMm = d.snow ?? 0;
