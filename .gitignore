@@ -21,3 +21,4 @@ watch/Barnbook.xcodeproj/project.xcworkspace/xcuserdata/
 watch/**/*.xcuserstate
 watch/build/
 watch/DerivedData/
+.worktrees/
