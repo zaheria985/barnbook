@@ -355,7 +355,10 @@ export function scoreDay(
     } else if (forecast.precipitation_chance > 60) {
       score = escalate(score, "yellow");
       const timing = noHourlyData ? " (timing unavailable)" : "";
-      reasons.push(`${forecast.precipitation_chance}% chance of rain${timing}`);
+      const amount = forecast.precipitation_inches > 0
+        ? `, ${forecast.precipitation_inches}" expected`
+        : "";
+      reasons.push(`${forecast.precipitation_chance}% chance of rain${amount}${timing}`);
     }
   }
 
