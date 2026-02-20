@@ -99,8 +99,7 @@ export async function POST(request: NextRequest) {
     if (
       weatherConfigured() &&
       weatherSettings?.location_lat &&
-      weatherSettings?.location_lng &&
-      rideSlots.length > 0
+      weatherSettings?.location_lng
     ) {
       const lat = Number(weatherSettings.location_lat);
       const lng = Number(weatherSettings.location_lng);
@@ -143,27 +142,48 @@ export async function POST(request: NextRequest) {
 
         const dayDate = day.date;
         const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
-        const slotsForDay = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
+        const scheduledSlots = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
 
-        // Get sunrise/sunset for daylight check
-        const sunrise = day.forecast.sunrise
+        // Get sunrise/sunset for daylight bounds
+        const sunriseHour = day.forecast.sunrise
           ? new Date(day.forecast.sunrise).getHours()
           : 6;
-        const sunset = day.forecast.sunset
+        const sunsetHour = day.forecast.sunset
           ? new Date(day.forecast.sunset).getHours()
           : 20;
 
-        for (const slot of slotsForDay) {
+        // If ride schedule has slots for this day, use those.
+        // Otherwise, generate 3-hour candidate windows from sunrise to sunset.
+        const candidateSlots: { start_time: string; end_time: string }[] = [];
+
+        if (scheduledSlots.length > 0) {
+          candidateSlots.push(
+            ...scheduledSlots.map((s) => ({
+              start_time: s.start_time,
+              end_time: s.end_time,
+            }))
+          );
+        } else {
+          // Generate 3-hour blocks starting 1 hour after sunrise
+          const firstHour = sunriseHour + 1;
+          for (let h = firstHour; h + 3 <= sunsetHour; h += 3) {
+            candidateSlots.push({
+              start_time: `${String(h).padStart(2, "0")}:00:00`,
+              end_time: `${String(h + 3).padStart(2, "0")}:00:00`,
+            });
+          }
+        }
+
+        for (const slot of candidateSlots) {
           const slotStartHour = parseInt(slot.start_time.split(":")[0], 10);
           const slotEndHour = parseInt(slot.end_time.split(":")[0], 10);
 
           // Skip if outside daylight hours
-          if (slotStartHour < sunrise || slotEndHour > sunset) continue;
+          if (slotStartHour < sunriseHour || slotEndHour > sunsetHour) continue;
 
           // Check for iCloud event conflicts
           const hasConflict = busySlots.some((busy) => {
             if (busy.date !== dayDate) return false;
-            // Simple overlap check using time strings
             const busyStart = busy.start.includes("T")
               ? busy.start.split("T")[1]?.slice(0, 5) ?? "00:00"
               : "00:00";
