@@ -284,6 +284,50 @@ CREATE TABLE IF NOT EXISTS vendor_mappings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Tags
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  tag_type TEXT NOT NULL DEFAULT 'label',
+  color TEXT,
+  default_category_id UUID REFERENCES budget_categories(id) ON DELETE SET NULL,
+  default_sub_item_id UUID REFERENCES budget_category_sub_items(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(name, tag_type)
+);
+
+-- Entity Tags (join table)
+CREATE TABLE IF NOT EXISTS entity_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL,
+  entity_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tag_id, entity_type, entity_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_tags_entity ON entity_tags(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_tags_tag ON entity_tags(tag_id);
+
+-- Budget Templates
+CREATE TABLE IF NOT EXISTS budget_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Budget Template Items
+CREATE TABLE IF NOT EXISTS budget_template_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES budget_templates(id) ON DELETE CASCADE,
+  category_id UUID NOT NULL REFERENCES budget_categories(id),
+  sub_item_id UUID REFERENCES budget_category_sub_items(id),
+  budgeted_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  UNIQUE(template_id, category_id, sub_item_id)
+);
+
 -- Schema Migrations tracking
 CREATE TABLE IF NOT EXISTS schema_migrations (
   filename TEXT PRIMARY KEY,

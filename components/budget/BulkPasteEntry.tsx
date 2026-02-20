@@ -162,7 +162,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
           Array.from(vendors).map(async (v) => {
             vendorMatchedRef.current.add(v);
             try {
-              const res = await fetch(`/api/vendors/match?vendor=${encodeURIComponent(v)}`);
+              const res = await fetch(`/api/tags/match?vendor=${encodeURIComponent(v)}`);
               if (res.ok) {
                 const match = await res.json();
                 if (match && match.category_id) {

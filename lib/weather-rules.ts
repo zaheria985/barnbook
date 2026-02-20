@@ -11,6 +11,7 @@ export interface ScoredDay {
   date: string;
   score: RideScore;
   reasons: string[];
+  notes: string[];
   forecast: DayForecast;
 }
 
@@ -119,17 +120,82 @@ function formatTime12h(time: string): string {
   return m === 0 ? `${h12} ${suffix}` : `${h12}:${m.toString().padStart(2, "0")} ${suffix}`;
 }
 
+function formatHour12h(hour: number): string {
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12} ${suffix}`;
+}
+
+/** Summarize contiguous rain blocks from hourly data for a single day */
+function summarizeRainWindow(
+  dayHourly: HourlyForecast[],
+  sunriseHour: number,
+  sunsetHour: number
+): string | null {
+  if (dayHourly.length === 0) return null;
+
+  // Find hours with rain (rain_inches > 0 or pop > 0.5)
+  const rainHours = dayHourly
+    .filter((h) => h.rain_inches > 0 || h.pop > 0.5)
+    .map((h) => new Date(h.hour).getHours())
+    .sort((a, b) => a - b);
+
+  if (rainHours.length === 0) return null;
+
+  // Group into contiguous blocks
+  const blocks: { start: number; end: number }[] = [];
+  let blockStart = rainHours[0];
+  let blockEnd = rainHours[0];
+
+  for (let i = 1; i < rainHours.length; i++) {
+    if (rainHours[i] <= blockEnd + 1) {
+      blockEnd = rainHours[i];
+    } else {
+      blocks.push({ start: blockStart, end: blockEnd + 1 });
+      blockStart = rainHours[i];
+      blockEnd = rainHours[i];
+    }
+  }
+  blocks.push({ start: blockStart, end: blockEnd + 1 });
+
+  // Check if all rain is outside daytime
+  const allOvernight = blocks.every(
+    (b) => b.end <= sunriseHour || b.start >= sunsetHour
+  );
+  if (allOvernight) {
+    const times = blocks.map((b) => `${formatHour12h(b.start)}-${formatHour12h(b.end)}`);
+    return `Rain overnight ${times.join(", ")}`;
+  }
+
+  // Check if rain covers most of the day
+  const totalRainHours = rainHours.length;
+  const totalDayHours = dayHourly.length;
+  if (totalRainHours >= totalDayHours * 0.8) {
+    return "Rain all day";
+  }
+
+  // Summarize blocks
+  if (blocks.length <= 2) {
+    const times = blocks
+      .map((b) => `${formatHour12h(b.start)}-${formatHour12h(b.end)}`)
+      .join(", ");
+    return `Rain ${times}`;
+  }
+
+  return "Scattered showers throughout the day";
+}
+
 function checkDaytimeRain(
   dayDate: string,
   forecast: DayForecast,
   hourly: HourlyForecast[],
   rideSlots: RideSlot[],
   settings: WeatherSettings
-): { skipDailyRain: boolean; reasons: string[]; score: RideScore } {
+): { skipDailyRain: boolean; reasons: string[]; notes: string[]; score: RideScore } {
   // Filter hourly data to this day
   const dayHourly = hourly.filter((h) => h.hour.startsWith(dayDate));
   if (dayHourly.length === 0) {
-    return { skipDailyRain: false, reasons: [], score: "green" };
+    return { skipDailyRain: false, reasons: [], notes: [], score: "green" };
   }
 
   // Filter to daytime hours (sunrise to sunset)
@@ -140,23 +206,40 @@ function checkDaytimeRain(
     return hour >= sunriseHour && hour < sunsetHour;
   });
 
+  // Get rain timing summary for the full day
+  const rainSummary = summarizeRainWindow(dayHourly, sunriseHour, sunsetHour);
+
   if (daytimeHourly.length === 0) {
-    return { skipDailyRain: true, reasons: [], score: "green" };
+    const notes: string[] = [];
+    // No daytime data but might have overnight rain
+    if (rainSummary && rainSummary.startsWith("Rain overnight")) {
+      notes.push(`${rainSummary} \u2014 daytime clear`);
+    }
+    return { skipDailyRain: true, reasons: [], notes, score: "green" };
   }
 
   const reasons: string[] = [];
+  const notes: string[] = [];
   let score: RideScore = "green";
 
-  // Daytime aggregate rain check
+  // Daytime aggregate rain check with timing
   const daytimeRain = daytimeHourly.reduce((sum, h) => sum + h.rain_inches, 0);
   const daytimeMaxPop = Math.max(...daytimeHourly.map((h) => h.pop));
+  const daytimeRainRounded = Math.round(daytimeRain * 100) / 100;
 
   if (daytimeRain >= settings.rain_cutoff_inches) {
     score = escalate(score, "red");
-    reasons.push(`Rain: ${daytimeRain}" expected during daytime`);
+    const timing = rainSummary || "Rain during daytime";
+    reasons.push(`${timing}: ${daytimeRainRounded}" expected`);
   } else if (daytimeMaxPop > 0.6) {
     score = escalate(score, "yellow");
-    reasons.push(`${Math.round(daytimeMaxPop * 100)}% chance of daytime rain`);
+    const timing = rainSummary ? ` (${rainSummary.toLowerCase()})` : "";
+    reasons.push(`${Math.round(daytimeMaxPop * 100)}% chance of daytime rain${timing}`);
+  }
+
+  // Check for overnight-only rain (no daytime rain but rain exists)
+  if (daytimeRain === 0 && rainSummary && rainSummary.startsWith("Rain overnight")) {
+    notes.push(`${rainSummary} \u2014 daytime clear`);
   }
 
   // Slot-specific rain reasons (if ride slots exist for this day)
@@ -187,7 +270,7 @@ function checkDaytimeRain(
     }
   }
 
-  return { skipDailyRain: true, reasons, score };
+  return { skipDailyRain: true, reasons, notes, score };
 }
 
 export function scoreDays(
@@ -214,8 +297,10 @@ export function scoreDays(
         scored.score = escalate(scored.score, hourlyResult.score);
         scored.reasons.unshift(...hourlyResult.reasons);
       }
+      scored.notes.push(...hourlyResult.notes);
     } else {
-      scored = scoreDay(f, settings);
+      // Days 2+: no hourly data, use daily aggregates with informational rain chance
+      scored = scoreDay(f, settings, false, i >= 2);
     }
 
     // Add footing check
@@ -250,19 +335,27 @@ export function scoreDays(
 export function scoreDay(
   forecast: DayForecast,
   settings: WeatherSettings,
-  skipRainCheck = false
+  skipRainCheck = false,
+  dailyAggregateOnly = false
 ): ScoredDay {
   const reasons: string[] = [];
+  const notes: string[] = [];
   let score: RideScore = "green";
 
   // Rain check (skipped when hourly time-aware check handled it)
   if (!skipRainCheck) {
     if (forecast.precipitation_inches >= settings.rain_cutoff_inches) {
+      // Significant rain amount is material regardless of timing
       score = escalate(score, "red");
       reasons.push(`Rain: ${forecast.precipitation_inches}" expected`);
     } else if (forecast.precipitation_chance > 60) {
-      score = escalate(score, "yellow");
-      reasons.push(`${forecast.precipitation_chance}% chance of rain`);
+      if (dailyAggregateOnly) {
+        // Days 2+: no hourly data, rain chance is informational only
+        notes.push(`${forecast.precipitation_chance}% rain likely \u2014 timing unavailable`);
+      } else {
+        score = escalate(score, "yellow");
+        reasons.push(`${forecast.precipitation_chance}% chance of rain`);
+      }
     }
   }
 
@@ -284,10 +377,9 @@ export function scoreDay(
     reasons.push(`Warm: ${forecast.day_f}\u00B0F daytime`);
   }
 
-  // Blanket check (overnight low — informational only, never red)
+  // Blanket check (overnight low — side note, does NOT affect ride score)
   if (forecast.low_f <= settings.cold_alert_temp_f) {
-    score = escalate(score, "yellow");
-    reasons.push(`Overnight low ${forecast.low_f}\u00B0F \u2014 blanket needed`);
+    notes.push(`Overnight low ${forecast.low_f}\u00B0F \u2014 blanket needed`);
   }
 
   // Wind check
@@ -314,7 +406,7 @@ export function scoreDay(
     reasons.push("Good riding conditions");
   }
 
-  return { date: forecast.date, score, reasons, forecast };
+  return { date: forecast.date, score, reasons, notes, forecast };
 }
 
 export function getAlerts(

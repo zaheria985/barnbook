@@ -80,7 +80,24 @@ export async function copyBudgetsFromDefaults(
     return 0;
   }
 
-  // Try to copy from budget_defaults template
+  // Try to copy from default budget template first
+  const defaultTemplate = await pool.query(
+    `SELECT id FROM budget_templates WHERE is_default = true LIMIT 1`
+  );
+
+  if (defaultTemplate.rows.length > 0) {
+    const res = await pool.query(
+      `INSERT INTO monthly_budgets (year_month, category_id, sub_item_id, budgeted_amount)
+       SELECT $1, category_id, sub_item_id, budgeted_amount
+       FROM budget_template_items
+       WHERE template_id = $2 AND budgeted_amount > 0
+       RETURNING id`,
+      [yearMonth, defaultTemplate.rows[0].id]
+    );
+    if ((res.rowCount ?? 0) > 0) return res.rowCount ?? 0;
+  }
+
+  // Fallback to legacy budget_defaults table
   const defaultsExist = await pool.query(
     `SELECT COUNT(*) FROM budget_defaults WHERE budgeted_amount > 0`
   );
@@ -125,6 +142,14 @@ export async function applyDefaultsToMonth(
 }
 
 export async function hasDefaults(): Promise<boolean> {
+  // Check templates first, then legacy defaults
+  const templates = await pool.query(
+    `SELECT EXISTS(
+       SELECT 1 FROM budget_template_items WHERE budgeted_amount > 0
+     ) AS has_items`
+  );
+  if (templates.rows[0].has_items) return true;
+
   const res = await pool.query(
     `SELECT COUNT(*) FROM budget_defaults WHERE budgeted_amount > 0`
   );

@@ -40,6 +40,7 @@ const settingsItems = [
   { href: "/settings/templates", label: "Templates", icon: IconClipboard },
   { href: "/settings/weather", label: "Weather", icon: IconCloudSun },
   { href: "/settings/keywords", label: "Keywords", icon: IconTag },
+  { href: "/settings/tags", label: "Tags", icon: IconTag },
   { href: "/settings/vendors", label: "Vendors", icon: IconStore },
   { href: "/settings/integrations", label: "Integrations", icon: IconLink },
   { href: "/settings/profile", label: "Profile", icon: IconUser },

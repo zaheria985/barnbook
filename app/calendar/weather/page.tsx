@@ -270,32 +270,39 @@ export default function WeatherDashboardPage() {
           </h2>
           <div className="space-y-2">
             {rideDays.map((day) => (
-              <div
-                key={day.date}
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${SCORE_STYLES[day.score]}`}
-              >
-                <div>
-                  <span className="font-medium text-sm">
-                    {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span className="ml-2 text-xs opacity-75">
-                    {day.forecast.day_f}&deg;F
-                  </span>
+              <div key={day.date} className="space-y-1">
+                <div
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 ${SCORE_STYLES[day.score]}`}
+                >
+                  <div>
+                    <span className="font-medium text-sm">
+                      {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <span className="ml-2 text-xs opacity-75">
+                      {day.forecast.day_f}&deg;F
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-medium">
+                      {SCORE_LABELS[day.score]}
+                    </span>
+                    {day.reasons.length > 0 && (
+                      <p className="text-[10px] opacity-75">
+                        {day.reasons[0]}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-medium">
-                    {SCORE_LABELS[day.score]}
-                  </span>
-                  {day.reasons.length > 0 && (
-                    <p className="text-[10px] opacity-75">
-                      {day.reasons[0]}
-                    </p>
-                  )}
-                </div>
+                {day.notes && day.notes.length > 0 && (
+                  <div className="ml-2 flex items-start gap-1.5 text-[11px] text-[var(--text-muted)]">
+                    <span className="mt-px">&#9789;</span>
+                    <span>{day.notes.join(" · ")}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

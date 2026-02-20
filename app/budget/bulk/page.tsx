@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import BulkPasteEntry from "@/components/budget/BulkPasteEntry";
+import TagPicker from "@/components/ui/TagPicker";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
 
 interface RowData {
@@ -121,6 +122,15 @@ export default function BulkEntryPage() {
   );
 }
 
+interface VendorTag {
+  id: string;
+  name: string;
+  tag_type: string;
+  color: string | null;
+  default_category_id: string | null;
+  default_sub_item_id: string | null;
+}
+
 function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
   const amountRef = useRef<HTMLInputElement>(null);
 
@@ -128,14 +138,11 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [categoryId, setCategoryId] = useState("");
   const [subItemId, setSubItemId] = useState("");
-  const [vendor, setVendor] = useState("");
+  const [vendorTags, setVendorTags] = useState<VendorTag[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [successCount, setSuccessCount] = useState(0);
-
-  const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     amountRef.current?.focus();
@@ -144,41 +151,10 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const hasSubItems = selectedCategory && selectedCategory.sub_items.length > 0;
 
-  const fetchVendorSuggestions = useCallback(async (query: string) => {
-    if (query.length < 2) {
-      setVendorSuggestions([]);
-      return;
-    }
-    try {
-      const res = await fetch(`/api/expenses?vendor_suggest=${encodeURIComponent(query)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVendorSuggestions(data);
-        setShowSuggestions(data.length > 0);
-      }
-    } catch {
-      /* empty */
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => fetchVendorSuggestions(vendor), 300);
-    return () => clearTimeout(timer);
-  }, [vendor, fetchVendorSuggestions]);
-
-  async function autoCategorize(vendorName: string) {
-    if (categoryId) return;
-    try {
-      const res = await fetch(`/api/vendors/match?vendor=${encodeURIComponent(vendorName)}`);
-      if (res.ok) {
-        const match = await res.json();
-        if (match && match.category_id) {
-          setCategoryId(match.category_id);
-          if (match.sub_item_id) setSubItemId(match.sub_item_id);
-        }
-      }
-    } catch {
-      /* empty */
+  function handleVendorTagSelected(tag: VendorTag) {
+    if (!categoryId && tag.default_category_id) {
+      setCategoryId(tag.default_category_id);
+      if (tag.default_sub_item_id) setSubItemId(tag.default_sub_item_id);
     }
   }
 
@@ -199,7 +175,7 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
           category_id: categoryId,
           sub_item_id: subItemId || null,
           amount: Number(amount),
-          vendor: vendor.trim() || null,
+          vendor: vendorTags.length > 0 ? vendorTags[0].name : null,
           date,
           notes: notes.trim() || null,
         }),
@@ -213,7 +189,7 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
       // Reset for next entry
       setSuccessCount((c) => c + 1);
       setAmount("");
-      setVendor("");
+      setVendorTags([]);
       setNotes("");
       setCategoryId("");
       setSubItemId("");
@@ -312,41 +288,19 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
           )}
         </div>
 
-        <div className="relative">
+        <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
             Vendor
           </label>
-          <input
-            type="text"
-            value={vendor}
-            onChange={(e) => setVendor(e.target.value)}
-            onFocus={() => vendorSuggestions.length > 0 && setShowSuggestions(true)}
-            onBlur={() => {
-              setTimeout(() => setShowSuggestions(false), 200);
-              if (vendor.trim()) autoCategorize(vendor.trim());
-            }}
+          <TagPicker
+            tagType="vendor"
+            selected={vendorTags}
+            onChange={setVendorTags}
+            singleSelect
+            allowCreate
             placeholder="e.g. Farm Supply Co"
-            className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2.5 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)]"
+            onTagSelected={handleVendorTagSelected}
           />
-          {showSuggestions && vendorSuggestions.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg">
-              {vendorSuggestions.map((s) => (
-                <li key={s}>
-                  <button
-                    type="button"
-                    onMouseDown={() => {
-                      setVendor(s);
-                      setShowSuggestions(false);
-                      autoCategorize(s);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                  >
-                    {s}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <div>

@@ -46,12 +46,14 @@ export default function CategoryCard({
   category: CategoryOverview;
   month?: string;
   categories?: BudgetCategory[];
-  onBudgetEdit?: (categoryId: string, amount: number) => void;
+  onBudgetEdit?: (categoryId: string, subItemId: string | null, amount: number) => void;
   onExpenseChanged?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(category.budgeted));
+  const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
+  const [subEditValue, setSubEditValue] = useState("");
 
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
@@ -82,8 +84,13 @@ export default function CategoryCard({
   }
 
   function handleSave() {
-    onBudgetEdit?.(category.category_id, Number(editValue) || 0);
+    onBudgetEdit?.(category.category_id, null, Number(editValue) || 0);
     setEditing(false);
+  }
+
+  function handleSubItemSave(subItemId: string) {
+    onBudgetEdit?.(category.category_id, subItemId, Number(subEditValue) || 0);
+    setEditingSubItemId(null);
   }
 
   function handleExpenseChanged() {
@@ -121,7 +128,7 @@ export default function CategoryCard({
         </button>
 
         <div className="text-right">
-          {editing ? (
+          {!hasSubItems && editing ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-[var(--text-muted)]">$</span>
               <input
@@ -141,6 +148,21 @@ export default function CategoryCard({
               >
                 Save
               </button>
+            </div>
+          ) : hasSubItems ? (
+            <div className="text-right">
+              <p className="text-sm text-[var(--text-muted)]">
+                Budget: {formatCurrency(category.budgeted)}
+              </p>
+              <p
+                className={`text-sm font-medium ${
+                  category.spent > category.budgeted
+                    ? "text-[var(--error-text)]"
+                    : "text-[var(--text-primary)]"
+                }`}
+              >
+                Spent: {formatCurrency(category.spent)}
+              </p>
             </div>
           ) : (
             <button
@@ -182,20 +204,49 @@ export default function CategoryCard({
                   <span className="text-sm text-[var(--text-secondary)]">
                     {sub.sub_item_label}
                   </span>
-                  <div className="text-right">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {formatCurrency(sub.budgeted)}
-                    </p>
-                    <p
-                      className={`text-sm ${
-                        sub.spent > sub.budgeted
-                          ? "text-[var(--error-text)]"
-                          : "text-[var(--text-primary)]"
-                      }`}
+                  {editingSubItemId === sub.sub_item_id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[var(--text-muted)]">$</span>
+                      <input
+                        type="number"
+                        value={subEditValue}
+                        onChange={(e) => setSubEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSubItemSave(sub.sub_item_id!);
+                          if (e.key === "Escape") setEditingSubItemId(null);
+                        }}
+                        autoFocus
+                        className="w-20 rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-right text-sm"
+                      />
+                      <button
+                        onClick={() => handleSubItemSave(sub.sub_item_id!)}
+                        className="text-xs text-[var(--interactive)] hover:underline"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingSubItemId(sub.sub_item_id);
+                        setSubEditValue(String(sub.budgeted));
+                      }}
+                      className="text-right"
                     >
-                      {formatCurrency(sub.spent)}
-                    </p>
-                  </div>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {formatCurrency(sub.budgeted)}
+                      </p>
+                      <p
+                        className={`text-sm ${
+                          sub.spent > sub.budgeted
+                            ? "text-[var(--error-text)]"
+                            : "text-[var(--text-primary)]"
+                        }`}
+                      >
+                        {formatCurrency(sub.spent)}
+                      </p>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

@@ -42,6 +42,8 @@ export default function BudgetPage() {
   const [showYearly, setShowYearly] = useState(false);
   const [showApplyDefaults, setShowApplyDefaults] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [templateList, setTemplateList] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,7 +69,7 @@ export default function BudgetPage() {
     fetchData();
   }, [fetchData]);
 
-  async function handleBudgetEdit(categoryId: string, amount: number) {
+  async function handleBudgetEdit(categoryId: string, subItemId: string | null, amount: number) {
     try {
       const res = await fetch("/api/budget/monthly", {
         method: "PUT",
@@ -75,6 +77,7 @@ export default function BudgetPage() {
         body: JSON.stringify({
           yearMonth: month,
           categoryId,
+          subItemId,
           amount,
         }),
       });
@@ -85,19 +88,47 @@ export default function BudgetPage() {
     }
   }
 
-  async function handleApplyDefaults(mode: "fill" | "overwrite") {
+  async function openTemplatePicker() {
+    try {
+      const res = await fetch("/api/budget/templates");
+      if (res.ok) {
+        const templates = await res.json();
+        if (templates.length > 0) {
+          setTemplateList(templates);
+          const def = templates.find((t: { is_default: boolean }) => t.is_default) || templates[0];
+          setSelectedTemplateId(def.id);
+          setShowApplyDefaults(true);
+          return;
+        }
+      }
+    } catch { /* fall through */ }
+    // Fallback: no templates, use legacy apply
+    handleApplyTemplate("fill");
+  }
+
+  async function handleApplyTemplate(mode: "fill" | "overwrite") {
     setApplying(true);
     try {
-      const res = await fetch("/api/budget/monthly/apply-defaults", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, mode }),
-      });
-      if (!res.ok) throw new Error("Failed to apply defaults");
+      if (selectedTemplateId) {
+        const res = await fetch(`/api/budget/templates/${selectedTemplateId}/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ month, mode }),
+        });
+        if (!res.ok) throw new Error("Failed to apply template");
+      } else {
+        // Legacy fallback
+        const res = await fetch("/api/budget/monthly/apply-defaults", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ month, mode }),
+        });
+        if (!res.ok) throw new Error("Failed to apply defaults");
+      }
       setShowApplyDefaults(false);
       await fetchData();
     } catch {
-      setError("Failed to apply defaults");
+      setError("Failed to apply template");
     } finally {
       setApplying(false);
     }
@@ -229,15 +260,15 @@ export default function BudgetPage() {
           <button
             onClick={() => {
               if (monthHasBudgets) {
-                setShowApplyDefaults(true);
+                openTemplatePicker();
               } else {
-                handleApplyDefaults("fill");
+                openTemplatePicker();
               }
             }}
             disabled={applying}
             className="w-full rounded-xl border border-dashed border-[var(--interactive)] py-3 text-sm font-medium text-[var(--interactive)] hover:bg-[var(--interactive-muted)] disabled:opacity-50 transition-colors"
           >
-            {applying ? "Applying..." : "Apply Budget Defaults"}
+            {applying ? "Applying..." : "Apply Template"}
           </button>
         </div>
       )}
@@ -297,27 +328,51 @@ export default function BudgetPage() {
       <Modal
         open={showApplyDefaults}
         onClose={() => setShowApplyDefaults(false)}
-        title="Apply Budget Defaults"
+        title="Apply Template"
       >
-        <p className="mb-4 text-sm text-[var(--text-secondary)]">
-          This month already has budgets set. How would you like to apply defaults?
-        </p>
+        {templateList.length > 1 && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Select template
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {templateList.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTemplateId(t.id)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    t.id === selectedTemplateId
+                      ? "bg-[var(--interactive)] text-white"
+                      : "bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {monthHasBudgets && (
+          <p className="mb-4 text-sm text-[var(--text-secondary)]">
+            This month already has budgets set. How would you like to apply?
+          </p>
+        )}
         <div className="space-y-2">
           <button
-            onClick={() => handleApplyDefaults("fill")}
+            onClick={() => handleApplyTemplate("fill")}
             disabled={applying}
             className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-left hover:bg-[var(--surface-muted)] disabled:opacity-50"
           >
             <span className="font-medium text-[var(--text-primary)]">Fill Gaps</span>
-            <p className="text-xs text-[var(--text-muted)]">Only add defaults where no budget is set yet</p>
+            <p className="text-xs text-[var(--text-muted)]">Only add where no budget is set yet</p>
           </button>
           <button
-            onClick={() => handleApplyDefaults("overwrite")}
+            onClick={() => handleApplyTemplate("overwrite")}
             disabled={applying}
             className="w-full rounded-lg border border-[var(--error-border)] px-4 py-3 text-left hover:bg-[var(--error-bg)] disabled:opacity-50"
           >
             <span className="font-medium text-[var(--error-text)]">Overwrite All</span>
-            <p className="text-xs text-[var(--text-muted)]">Replace all budgets with defaults</p>
+            <p className="text-xs text-[var(--text-muted)]">Replace all budgets with template values</p>
           </button>
           <button
             onClick={() => setShowApplyDefaults(false)}

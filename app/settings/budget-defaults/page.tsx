@@ -1,8 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Modal from "@/components/ui/Modal";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
-import type { BudgetDefault } from "@/lib/queries/budget-defaults";
+
+interface Template {
+  id: string;
+  name: string;
+  is_default: boolean;
+}
+
+interface TemplateItem {
+  id: string;
+  template_id: string;
+  category_id: string;
+  category_name: string;
+  sub_item_id: string | null;
+  sub_item_label: string | null;
+  budgeted_amount: number;
+}
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -11,45 +27,81 @@ function formatCurrency(n: number) {
   }).format(n);
 }
 
-/** Build a unique key for pending edits: categoryId or categoryId:subItemId */
 function editKey(categoryId: string, subItemId: string | null): string {
   return subItemId ? `${categoryId}:${subItemId}` : categoryId;
 }
 
 export default function BudgetDefaultsPage() {
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
-  const [defaults, setDefaults] = useState<BudgetDefault[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [items, setItems] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [pendingEdits, setPendingEdits] = useState<Record<string, string>>({});
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // Template action modals
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [modalName, setModalName] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchTemplates = useCallback(async () => {
     try {
-      const [catRes, defRes] = await Promise.all([
-        fetch("/api/budget/categories"),
-        fetch("/api/budget/defaults"),
-      ]);
-      if (!catRes.ok || !defRes.ok) throw new Error("Failed to fetch");
-      const [catData, defData] = await Promise.all([
-        catRes.json(),
-        defRes.json(),
-      ]);
-      setCategories(catData);
-      setDefaults(defData);
+      const res = await fetch("/api/budget/templates");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data: Template[] = await res.json();
+      setTemplates(data);
+      return data;
     } catch {
-      setError("Failed to load data");
-    } finally {
-      setLoading(false);
+      setError("Failed to load templates");
+      return [];
+    }
+  }, []);
+
+  const fetchItems = useCallback(async (templateId: string) => {
+    try {
+      const res = await fetch(`/api/budget/templates/${templateId}/items`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      setItems(await res.json());
+    } catch {
+      setError("Failed to load template items");
+    }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/budget/categories");
+      if (!res.ok) throw new Error("Failed to fetch");
+      setCategories(await res.json());
+    } catch {
+      setError("Failed to load categories");
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    async function init() {
+      setLoading(true);
+      await fetchCategories();
+      const tmpl = await fetchTemplates();
+      if (tmpl.length > 0) {
+        const def = tmpl.find((t) => t.is_default) || tmpl[0];
+        setSelectedTemplateId(def.id);
+        await fetchItems(def.id);
+      }
+      setLoading(false);
+    }
+    init();
+  }, [fetchCategories, fetchTemplates, fetchItems]);
+
+  async function selectTemplate(id: string) {
+    setSelectedTemplateId(id);
+    setPendingEdits({});
+    await fetchItems(id);
+  }
 
   function toggleCategory(catId: string) {
     setExpandedCategories((prev) => {
@@ -60,41 +112,32 @@ export default function BudgetDefaultsPage() {
     });
   }
 
-  function getDefaultAmount(
-    categoryId: string,
-    subItemId: string | null
-  ): number {
-    const d = defaults.find(
-      (def) =>
-        def.category_id === categoryId &&
-        (subItemId ? def.sub_item_id === subItemId : def.sub_item_id === null)
+  function getItemAmount(categoryId: string, subItemId: string | null): number {
+    const item = items.find(
+      (i) =>
+        i.category_id === categoryId &&
+        (subItemId ? i.sub_item_id === subItemId : i.sub_item_id === null)
     );
-    return d ? Number(d.budgeted_amount) : 0;
+    return item ? Number(item.budgeted_amount) : 0;
   }
 
-  function getEditValue(
-    categoryId: string,
-    subItemId: string | null
-  ): string {
+  function getEditValue(categoryId: string, subItemId: string | null): string {
     const key = editKey(categoryId, subItemId);
     if (pendingEdits[key] !== undefined) return pendingEdits[key];
-    return String(getDefaultAmount(categoryId, subItemId));
+    return String(getItemAmount(categoryId, subItemId));
   }
 
-  function setEditField(
-    categoryId: string,
-    subItemId: string | null,
-    value: string
-  ) {
+  function setEditField(categoryId: string, subItemId: string | null, value: string) {
     const key = editKey(categoryId, subItemId);
     setPendingEdits((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSave(categoryId: string, subItemId: string | null) {
+    if (!selectedTemplateId) return;
     const key = editKey(categoryId, subItemId);
     const val = getEditValue(categoryId, subItemId);
     const amount = Number(val) || 0;
-    const current = getDefaultAmount(categoryId, subItemId);
+    const current = getItemAmount(categoryId, subItemId);
 
     if (amount === current) {
       setPendingEdits((prev) => {
@@ -106,7 +149,7 @@ export default function BudgetDefaultsPage() {
     }
 
     try {
-      const res = await fetch("/api/budget/defaults", {
+      const res = await fetch(`/api/budget/templates/${selectedTemplateId}/items`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categoryId, subItemId, amount }),
@@ -117,24 +160,110 @@ export default function BudgetDefaultsPage() {
         delete next[key];
         return next;
       });
-      await fetchData();
+      await fetchItems(selectedTemplateId);
     } catch {
-      setError("Failed to save default");
+      setError("Failed to save template item");
+    }
+  }
+
+  async function handleCreate() {
+    if (!modalName.trim()) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/budget/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: modalName.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create");
+      }
+      const tmpl: Template = await res.json();
+      setShowCreateModal(false);
+      setModalName("");
+      await fetchTemplates();
+      await selectTemplate(tmpl.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create template");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleRename() {
+    if (!modalName.trim() || !selectedTemplateId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/budget/templates/${selectedTemplateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: modalName.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to rename");
+      setShowRenameModal(false);
+      setModalName("");
+      await fetchTemplates();
+    } catch {
+      setError("Failed to rename template");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleClone() {
+    if (!modalName.trim() || !selectedTemplateId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/budget/templates/${selectedTemplateId}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: modalName.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to clone");
+      const tmpl: Template = await res.json();
+      setShowCloneModal(false);
+      setModalName("");
+      await fetchTemplates();
+      await selectTemplate(tmpl.id);
+    } catch {
+      setError("Failed to clone template");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selectedTemplateId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/budget/templates/${selectedTemplateId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      setShowDeleteConfirm(false);
+      const remaining = await fetchTemplates();
+      if (remaining.length > 0) {
+        await selectTemplate(remaining[0].id);
+      } else {
+        setSelectedTemplateId(null);
+        setItems([]);
+      }
+    } catch {
+      setError("Failed to delete template");
+    } finally {
+      setActionLoading(false);
     }
   }
 
   const total = categories.reduce((sum, cat) => {
     if (cat.sub_items.length > 0) {
-      return (
-        sum +
-        cat.sub_items.reduce(
-          (s, sub) => s + getDefaultAmount(cat.id, sub.id),
-          0
-        )
-      );
+      return sum + cat.sub_items.reduce((s, sub) => s + getItemAmount(cat.id, sub.id), 0);
     }
-    return sum + getDefaultAmount(cat.id, null);
+    return sum + getItemAmount(cat.id, null);
   }, 0);
+
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
 
   function renderAmountInput(categoryId: string, subItemId: string | null) {
     return (
@@ -162,117 +291,292 @@ export default function BudgetDefaultsPage() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Budget Defaults
+          Budget Templates
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Standard budget amounts applied to each new month
+          Named budget templates you can apply to any month
         </p>
       </div>
 
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
-          <button
-            onClick={() => setError("")}
-            className="ml-2 font-medium underline"
-          >
+          <button onClick={() => setError("")} className="ml-2 font-medium underline">
             Dismiss
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-[var(--text-muted)]">
-          Loading...
-        </div>
+        <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
       ) : (
         <div className="space-y-4">
-          {/* Total */}
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[var(--text-primary)]">
-                Total
-              </span>
-              <span className="text-lg font-bold text-[var(--text-primary)]">
-                {formatCurrency(total)}
-              </span>
-            </div>
-          </div>
-
-          {/* Categories */}
-          {categories.map((cat) => {
-            const isExpanded = expandedCategories.has(cat.id);
-            const hasSubItems = cat.sub_items.length > 0;
-            const catTotal = hasSubItems
-              ? cat.sub_items.reduce(
-                  (s, sub) => s + getDefaultAmount(cat.id, sub.id),
-                  0
-                )
-              : getDefaultAmount(cat.id, null);
-
-            return (
-              <div
-                key={cat.id}
-                className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden"
+          {/* Template selector */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Template</span>
+              <button
+                onClick={() => {
+                  setModalName("");
+                  setShowCreateModal(true);
+                }}
+                className="text-xs font-medium text-[var(--interactive)] hover:underline"
               >
-                <button
-                  onClick={() => toggleCategory(cat.id)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-muted)] transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={`text-[var(--text-muted)] transition-transform ${
-                        isExpanded ? "rotate-180" : ""
+                + New Template
+              </button>
+            </div>
+
+            {templates.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                No templates yet. Create one to get started.
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {templates.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => selectTemplate(t.id)}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                        t.id === selectedTemplateId
+                          ? "bg-[var(--interactive)] text-white"
+                          : "bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
                       }`}
                     >
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                    <span className="font-medium text-[var(--text-primary)]">
-                      {cat.name}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium text-[var(--text-secondary)]">
-                    {formatCurrency(catTotal)}
-                  </span>
-                </button>
+                      {t.name}
+                      {t.is_default && (
+                        <span className="ml-1 text-[10px] opacity-75">(default)</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
 
-                {isExpanded && (
-                  <div className="border-t border-[var(--border-light)] px-4 py-3 space-y-3">
-                    {hasSubItems ? (
-                      cat.sub_items.map((sub) => (
-                        <div
-                          key={sub.id}
-                          className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2"
-                        >
-                          <span className="text-sm text-[var(--text-secondary)]">
-                            {sub.label}
-                          </span>
-                          {renderAmountInput(cat.id, sub.id)}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2">
-                        <span className="text-sm text-[var(--text-secondary)]">
-                          {cat.name}
-                        </span>
-                        {renderAmountInput(cat.id, null)}
-                      </div>
+                {/* Template actions */}
+                {selectedTemplate && (
+                  <div className="mt-3 flex gap-3 text-xs">
+                    <button
+                      onClick={() => {
+                        setModalName(selectedTemplate.name);
+                        setShowRenameModal(true);
+                      }}
+                      className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      onClick={() => {
+                        setModalName(`${selectedTemplate.name} (copy)`);
+                        setShowCloneModal(true);
+                      }}
+                      className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      Clone
+                    </button>
+                    {!selectedTemplate.is_default && (
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="text-[var(--error-text)] hover:underline"
+                      >
+                        Delete
+                      </button>
                     )}
                   </div>
                 )}
+              </>
+            )}
+          </div>
+
+          {/* Total */}
+          {selectedTemplateId && (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[var(--text-primary)]">Total</span>
+                <span className="text-lg font-bold text-[var(--text-primary)]">
+                  {formatCurrency(total)}
+                </span>
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {/* Categories */}
+          {selectedTemplateId &&
+            categories.map((cat) => {
+              const isExpanded = expandedCategories.has(cat.id);
+              const hasSubItems = cat.sub_items.length > 0;
+              const catTotal = hasSubItems
+                ? cat.sub_items.reduce((s, sub) => s + getItemAmount(cat.id, sub.id), 0)
+                : getItemAmount(cat.id, null);
+
+              return (
+                <div
+                  key={cat.id}
+                  className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] overflow-hidden"
+                >
+                  <button
+                    onClick={() => toggleCategory(cat.id)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-muted)] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`text-[var(--text-muted)] transition-transform ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">
+                      {formatCurrency(catTotal)}
+                    </span>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-[var(--border-light)] px-4 py-3 space-y-3">
+                      {hasSubItems ? (
+                        cat.sub_items.map((sub) => (
+                          <div
+                            key={sub.id}
+                            className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2"
+                          >
+                            <span className="text-sm text-[var(--text-secondary)]">
+                              {sub.label}
+                            </span>
+                            {renderAmountInput(cat.id, sub.id)}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-3 py-2">
+                          <span className="text-sm text-[var(--text-secondary)]">
+                            {cat.name}
+                          </span>
+                          {renderAmountInput(cat.id, null)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       )}
+
+      {/* Create Modal */}
+      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Template">
+        <input
+          type="text"
+          value={modalName}
+          onChange={(e) => setModalName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+          placeholder="Template name..."
+          autoFocus
+          className="mb-4 w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowCreateModal(false)}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={actionLoading || !modalName.trim()}
+            className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
+          >
+            {actionLoading ? "Creating..." : "Create"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Rename Modal */}
+      <Modal open={showRenameModal} onClose={() => setShowRenameModal(false)} title="Rename Template">
+        <input
+          type="text"
+          value={modalName}
+          onChange={(e) => setModalName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+          autoFocus
+          className="mb-4 w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowRenameModal(false)}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleRename}
+            disabled={actionLoading || !modalName.trim()}
+            className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
+          >
+            {actionLoading ? "Saving..." : "Rename"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Clone Modal */}
+      <Modal open={showCloneModal} onClose={() => setShowCloneModal(false)} title="Clone Template">
+        <p className="mb-3 text-sm text-[var(--text-secondary)]">
+          Create a copy of &ldquo;{selectedTemplate?.name}&rdquo; with a new name:
+        </p>
+        <input
+          type="text"
+          value={modalName}
+          onChange={(e) => setModalName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleClone(); }}
+          autoFocus
+          className="mb-4 w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowCloneModal(false)}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleClone}
+            disabled={actionLoading || !modalName.trim()}
+            className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
+          >
+            {actionLoading ? "Cloning..." : "Clone"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Confirm */}
+      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Template">
+        <p className="mb-4 text-sm text-[var(--text-secondary)]">
+          Are you sure you want to delete &ldquo;{selectedTemplate?.name}&rdquo;? This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={actionLoading}
+            className="rounded-lg bg-[var(--error-text)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {actionLoading ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
