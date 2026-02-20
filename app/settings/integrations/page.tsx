@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface SyncStatus {
   vikunja: {
@@ -15,6 +15,20 @@ interface SyncStatus {
   email_ingest: {
     configured: boolean;
   };
+  icloud: {
+    configured: boolean;
+  };
+}
+
+interface IcloudCalendar {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+interface IcloudSettings {
+  read_calendar_ids: string[];
+  write_calendar_id: string | null;
 }
 
 export default function IntegrationsSettingsPage() {
@@ -22,12 +36,54 @@ export default function IntegrationsSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // iCloud state
+  const [calendars, setCalendars] = useState<IcloudCalendar[]>([]);
+  const [icloudSettings, setIcloudSettings] = useState<IcloudSettings>({
+    read_calendar_ids: [],
+    write_calendar_id: null,
+  });
+  const [calendarsLoading, setCalendarsLoading] = useState(false);
+  const [icloudSaving, setIcloudSaving] = useState(false);
+  const [icloudSyncing, setIcloudSyncing] = useState(false);
+  const [icloudMessage, setIcloudMessage] = useState("");
+
+  const fetchCalendars = useCallback(async () => {
+    setCalendarsLoading(true);
+    try {
+      const [calRes, settingsRes] = await Promise.all([
+        fetch("/api/sync/icloud/calendars"),
+        fetch("/api/sync/icloud/settings"),
+      ]);
+      if (calRes.ok) {
+        const data = await calRes.json();
+        setCalendars(data.calendars || []);
+      }
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        setIcloudSettings({
+          read_calendar_ids: data.read_calendar_ids || [],
+          write_calendar_id: data.write_calendar_id || null,
+        });
+      }
+    } catch {
+      // Calendar fetch failed — shown as empty list
+    } finally {
+      setCalendarsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchStatus() {
       try {
         const res = await fetch("/api/sync/status");
         if (!res.ok) throw new Error("Failed to fetch");
-        setStatus(await res.json());
+        const data = await res.json();
+        setStatus(data);
+
+        // If iCloud is configured, fetch calendars
+        if (data.icloud?.configured) {
+          fetchCalendars();
+        }
       } catch {
         setError("Failed to load integration status");
       } finally {
@@ -35,7 +91,54 @@ export default function IntegrationsSettingsPage() {
       }
     }
     fetchStatus();
-  }, []);
+  }, [fetchCalendars]);
+
+  async function saveIcloudSettings() {
+    setIcloudSaving(true);
+    setIcloudMessage("");
+    try {
+      const res = await fetch("/api/sync/icloud/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(icloudSettings),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      setIcloudMessage("Settings saved");
+    } catch {
+      setIcloudMessage("Failed to save settings");
+    } finally {
+      setIcloudSaving(false);
+    }
+  }
+
+  async function triggerIcloudSync() {
+    setIcloudSyncing(true);
+    setIcloudMessage("");
+    try {
+      const res = await fetch("/api/sync/icloud", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Sync failed");
+      }
+      const data = await res.json();
+      setIcloudMessage(
+        `Synced: ${data.events_found} events found, ${data.keywords_matched} matched, ${data.windows_suggested} ride windows`
+      );
+    } catch (err) {
+      setIcloudMessage(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setIcloudSyncing(false);
+    }
+  }
+
+  function toggleReadCalendar(id: string) {
+    setIcloudSettings((prev) => {
+      const ids = prev.read_calendar_ids.includes(id)
+        ? prev.read_calendar_ids.filter((c) => c !== id)
+        : [...prev.read_calendar_ids, id];
+      return { ...prev, read_calendar_ids: ids };
+    });
+  }
 
   if (loading) {
     return (
@@ -63,6 +166,110 @@ export default function IntegrationsSettingsPage() {
       )}
 
       <div className="space-y-4">
+        {/* iCloud CalDAV */}
+        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                iCloud Calendar
+              </h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                Auto-detect equestrian events and suggest ride windows
+              </p>
+            </div>
+            <StatusBadge
+              configured={status?.icloud?.configured ?? false}
+              connected={status?.icloud?.configured ?? false}
+            />
+          </div>
+          {status?.icloud?.configured ? (
+            <div className="mt-3 space-y-3">
+              {calendarsLoading ? (
+                <p className="text-sm text-[var(--text-muted)]">Loading calendars...</p>
+              ) : calendars.length > 0 ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Read calendars (event detection)
+                    </label>
+                    <div className="space-y-1">
+                      {calendars.map((cal) => (
+                        <label key={cal.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={icloudSettings.read_calendar_ids.includes(cal.id)}
+                            onChange={() => toggleReadCalendar(cal.id)}
+                            className="rounded border-[var(--border)]"
+                          />
+                          {cal.color && (
+                            <span
+                              className="inline-block h-3 w-3 rounded-full"
+                              style={{ backgroundColor: cal.color }}
+                            />
+                          )}
+                          <span className="text-[var(--text-primary)]">{cal.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Write calendar (ride windows)
+                    </label>
+                    <select
+                      value={icloudSettings.write_calendar_id || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          write_calendar_id: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None (don&apos;t write ride windows)</option>
+                      {calendars.map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={saveIcloudSettings}
+                      disabled={icloudSaving}
+                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                      {icloudSaving ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      onClick={triggerIcloudSync}
+                      disabled={icloudSyncing}
+                      className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                    >
+                      {icloudSyncing ? "Syncing..." : "Sync Now"}
+                    </button>
+                  </div>
+                  {icloudMessage && (
+                    <p className="text-xs text-[var(--text-muted)]">{icloudMessage}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)]">
+                  No calendars found. Check your iCloud credentials.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
+              <p className="text-xs text-[var(--text-muted)]">
+                Set <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">ICLOUD_APPLE_ID</code> and{" "}
+                <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">ICLOUD_APP_PASSWORD</code> environment variables to enable.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Vikunja */}
         <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
           <div className="flex items-start justify-between">

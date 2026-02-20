@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as vikunja from "@/lib/vikunja";
 import * as weatherkit from "@/lib/openweathermap";
+import * as caldav from "@/lib/caldav";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -24,6 +25,9 @@ export async function GET() {
     },
     email_ingest: {
       configured: !!process.env.EMAIL_INGEST_SECRET,
+    },
+    icloud: {
+      configured: caldav.isConfigured(),
     },
   });
 }

@@ -87,8 +87,12 @@ export function estimateFutureMoisture(
   for (let i = 0; i <= dayIndex && i < forecastDays.length; i++) {
     const day = forecastDays[i];
     // Add forecast rain for the day
+    // Use higher of: forecast volume, or probability-weighted minimum
+    // This ensures 80% rain chance adds at least 0.20" even if volume field is low
     if (i > 0 || dayIndex > 0) {
-      moisture += day.precipitation_inches;
+      const probRain = (day.precipitation_chance / 100) * settings.rain_cutoff_inches;
+      const rainToAdd = Math.max(day.precipitation_inches, probRain);
+      moisture += rainToAdd;
     }
 
     // Apply 24 hours of drying for each full day
@@ -299,8 +303,8 @@ export function scoreDays(
       }
       scored.notes.push(...hourlyResult.notes);
     } else {
-      // Days 2+: no hourly data, use daily aggregates with informational rain chance
-      scored = scoreDay(f, settings, false, i >= 2);
+      // Days 2+: no hourly data, use daily aggregates
+      scored = scoreDay(f, settings, false, true);
     }
 
     // Add footing check
@@ -336,7 +340,7 @@ export function scoreDay(
   forecast: DayForecast,
   settings: WeatherSettings,
   skipRainCheck = false,
-  dailyAggregateOnly = false
+  noHourlyData = false
 ): ScoredDay {
   const reasons: string[] = [];
   const notes: string[] = [];
@@ -349,13 +353,9 @@ export function scoreDay(
       score = escalate(score, "red");
       reasons.push(`Rain: ${forecast.precipitation_inches}" expected`);
     } else if (forecast.precipitation_chance > 60) {
-      if (dailyAggregateOnly) {
-        // Days 2+: no hourly data, rain chance is informational only
-        notes.push(`${forecast.precipitation_chance}% rain likely \u2014 timing unavailable`);
-      } else {
-        score = escalate(score, "yellow");
-        reasons.push(`${forecast.precipitation_chance}% chance of rain`);
-      }
+      score = escalate(score, "yellow");
+      const timing = noHourlyData ? " (timing unavailable)" : "";
+      reasons.push(`${forecast.precipitation_chance}% chance of rain${timing}`);
     }
   }
 
