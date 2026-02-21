@@ -140,6 +140,26 @@ export async function replaceSuggestedWindows(
   }
 }
 
+export async function getSuggestedWindow(
+  id: string
+): Promise<SuggestedWindow | null> {
+  const res = await pool.query(
+    `SELECT id, date, start_time, end_time, weather_score, weather_notes, ical_uid, created_at
+     FROM suggested_ride_windows
+     WHERE id = $1`,
+    [id]
+  );
+  return res.rows[0] || null;
+}
+
+export async function deleteSuggestedWindow(id: string): Promise<boolean> {
+  const res = await pool.query(
+    `DELETE FROM suggested_ride_windows WHERE id = $1`,
+    [id]
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
 export async function cleanupOldSyncState(beforeDate: string): Promise<number> {
   const res = await pool.query(
     `DELETE FROM icloud_sync_state WHERE last_seen_at < $1`,

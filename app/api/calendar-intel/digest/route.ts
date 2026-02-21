@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import pool from "@/lib/db";
+import { getSuggestedWindows } from "@/lib/queries/icloud-sync";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -17,24 +18,26 @@ export async function GET() {
       .toISOString()
       .split("T")[0];
 
-    const res = await pool.query(
-      `SELECT e.id, e.title, e.event_type, e.start_date, e.end_date,
-              e.location, e.notes, e.is_confirmed, e.created_at
-       FROM events e
-       WHERE e.start_date BETWEEN $1 AND $2
-         AND e.is_confirmed = false
-       ORDER BY e.start_date`,
-      [today, weekFromNow]
-    );
-
-    // Also find keywords that could suggest upcoming events
-    const keywordsRes = await pool.query(
-      `SELECT keyword, suggested_event_type FROM detection_keywords`
-    );
+    const [res, keywordsRes, suggestedWindows] = await Promise.all([
+      pool.query(
+        `SELECT e.id, e.title, e.event_type, e.start_date, e.end_date,
+                e.location, e.notes, e.is_confirmed, e.created_at
+         FROM events e
+         WHERE e.start_date BETWEEN $1 AND $2
+           AND e.is_confirmed = false
+         ORDER BY e.start_date`,
+        [today, weekFromNow]
+      ),
+      pool.query(
+        `SELECT keyword, suggested_event_type FROM detection_keywords`
+      ),
+      getSuggestedWindows(today, weekFromNow),
+    ]);
 
     return NextResponse.json({
       upcoming_events: res.rows,
       detection_keywords: keywordsRes.rows,
+      suggested_windows: suggestedWindows,
     });
   } catch (error) {
     console.error("Failed to fetch digest:", error);
