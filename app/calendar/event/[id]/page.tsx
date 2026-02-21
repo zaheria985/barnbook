@@ -218,14 +218,14 @@ export default function EventDetailPage() {
           <div>
             <span className="text-[var(--text-muted)]">Start</span>
             <p className="font-medium text-[var(--text-primary)]">
-              {new Date(event.start_date + "T00:00:00").toLocaleDateString()}
+              {new Date(String(event.start_date).split("T")[0] + "T00:00:00").toLocaleDateString()}
             </p>
           </div>
           {event.end_date && (
             <div>
               <span className="text-[var(--text-muted)]">End</span>
               <p className="font-medium text-[var(--text-primary)]">
-                {new Date(event.end_date + "T00:00:00").toLocaleDateString()}
+                {new Date(String(event.end_date).split("T")[0] + "T00:00:00").toLocaleDateString()}
               </p>
             </div>
           )}
@@ -241,7 +241,7 @@ export default function EventDetailPage() {
             <div>
               <span className="text-[var(--text-muted)]">Entry Due</span>
               <p className="font-medium text-[var(--text-primary)]">
-                {new Date(event.entry_due_date + "T00:00:00").toLocaleDateString()}
+                {new Date(String(event.entry_due_date).split("T")[0] + "T00:00:00").toLocaleDateString()}
               </p>
             </div>
           )}

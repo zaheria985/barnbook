@@ -162,7 +162,7 @@ function PendingExpenseCard({
             {expense.vendor || "Unknown vendor"}
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            {new Date(expense.date + "T00:00:00").toLocaleDateString()} &bull; {expense.source}
+            {new Date(String(expense.date).split("T")[0] + "T00:00:00").toLocaleDateString()} &bull; {expense.source}
           </p>
           {expense.notes && (
             <p className="mt-1 text-xs text-[var(--text-muted)] italic">

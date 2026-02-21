@@ -186,7 +186,7 @@ export default function WeeklyDigestPage() {
                           {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
                         </span>
                         <span className="text-xs text-[var(--text-muted)]">
-                          {new Date(event.start_date + "T00:00:00").toLocaleDateString("en-US", {
+                          {new Date(String(event.start_date).split("T")[0] + "T00:00:00").toLocaleDateString("en-US", {
                             weekday: "short",
                             month: "short",
                             day: "numeric",
@@ -235,7 +235,7 @@ export default function WeeklyDigestPage() {
                         <div className="flex items-center gap-2">
                           <span className={`inline-block h-2.5 w-2.5 rounded-full ${scoreColor(w.weather_score)}`} />
                           <span className="font-medium text-[var(--text-primary)]">
-                            {new Date(w.date + "T00:00:00").toLocaleDateString("en-US", {
+                            {new Date(String(w.date).split("T")[0] + "T00:00:00").toLocaleDateString("en-US", {
                               weekday: "short",
                               month: "short",
                               day: "numeric",

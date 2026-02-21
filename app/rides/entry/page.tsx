@@ -41,7 +41,7 @@ function isRecentDate(dateStr: string): boolean {
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr.split("T")[0] + "T00:00:00");
   return d >= yesterday && d <= today;
 }
 

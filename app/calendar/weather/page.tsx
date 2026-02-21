@@ -344,7 +344,7 @@ export default function WeatherDashboardPage() {
               >
                 <div>
                   <span className="font-medium text-sm text-[var(--success-text)]">
-                    {new Date(event.start_date + "T00:00:00").toLocaleDateString("en-US", {
+                    {new Date(String(event.start_date).split("T")[0] + "T00:00:00").toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",
                       day: "numeric",
