@@ -11,12 +11,7 @@ import {
   IconHorse,
   IconCalendar,
   IconSliders,
-  IconClipboard,
-  IconCloudSun,
-  IconTag,
   IconStore,
-  IconLink,
-  IconUser,
   IconLogOut,
   IconReceipt,
 } from "@/components/icons";
@@ -34,16 +29,7 @@ const mainItems = [
 ];
 
 const settingsItems = [
-  { href: "/settings/categories", label: "Categories", icon: IconSliders },
-  { href: "/settings/budget-defaults", label: "Budget Defaults", icon: IconWallet },
-  { href: "/settings/horses", label: "Horses", icon: IconHorse },
-  { href: "/settings/templates", label: "Templates", icon: IconClipboard },
-  { href: "/settings/weather", label: "Weather", icon: IconCloudSun },
-  { href: "/settings/keywords", label: "Keywords", icon: IconTag },
-  { href: "/settings/tags", label: "Tags", icon: IconTag },
-  { href: "/settings/vendors", label: "Vendors", icon: IconStore },
-  { href: "/settings/integrations", label: "Integrations", icon: IconLink },
-  { href: "/settings/profile", label: "Profile", icon: IconUser },
+  { href: "/settings", label: "Settings", icon: IconSliders },
 ];
 
 export default function Sidebar() {

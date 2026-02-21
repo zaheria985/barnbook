@@ -15,7 +15,7 @@ interface Tag {
   default_sub_item_label: string | null;
 }
 
-export default function TagsSettingsPage() {
+export default function TagsSection() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,14 +123,11 @@ export default function TagsSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Tags</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Vendor tags auto-categorize expenses. Label tags organize anything.
-          </p>
-        </div>
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-[var(--text-muted)]">
+          Vendor tags auto-categorize expenses. Label tags organize anything.
+        </p>
         <button
           onClick={openCreate}
           className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]"
@@ -335,6 +332,6 @@ export default function TagsSettingsPage() {
           </button>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

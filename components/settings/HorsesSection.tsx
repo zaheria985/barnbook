@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
 import type { Horse } from "@/lib/queries/horses";
 
-export default function HorseProfilesPage() {
+export default function HorsesSection() {
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -102,16 +102,8 @@ export default function HorseProfilesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            Horse Profiles
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Manage your horses for ride tracking
-          </p>
-        </div>
+    <>
+      <div className="flex justify-end">
         <button
           onClick={openAdd}
           className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] transition-colors"
@@ -255,6 +247,6 @@ export default function HorseProfilesPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -12,7 +12,7 @@ const EVENT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export default function KeywordsSettingsPage() {
+export default function KeywordsSection() {
   const [keywords, setKeywords] = useState<DetectionKeyword[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,15 +80,10 @@ export default function KeywordsSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Calendar Intelligence Keywords
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Keywords used to detect horse-related events from emails and calendars
-        </p>
-      </div>
+    <>
+      <p className="mb-4 text-sm text-[var(--text-muted)]">
+        Keywords used to detect horse-related events from emails and calendars
+      </p>
 
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
@@ -160,6 +155,6 @@ export default function KeywordsSettingsPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

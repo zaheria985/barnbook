@@ -31,7 +31,7 @@ function editKey(categoryId: string, subItemId: string | null): string {
   return subItemId ? `${categoryId}:${subItemId}` : categoryId;
 }
 
-export default function BudgetDefaultsPage() {
+export default function BudgetDefaultsSection() {
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -288,15 +288,10 @@ export default function BudgetDefaultsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Budget Templates
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Named budget templates you can apply to any month
-        </p>
-      </div>
+    <>
+      <p className="mb-4 text-sm text-[var(--text-muted)]">
+        Named budget templates you can apply to any month
+      </p>
 
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
@@ -577,6 +572,6 @@ export default function BudgetDefaultsPage() {
           </button>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

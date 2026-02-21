@@ -2,29 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   IconSliders,
-  IconHorse,
-  IconClipboard,
-  IconCloudSun,
-  IconTag,
-  IconStore,
-  IconLink,
-  IconUser,
   IconX,
 } from "./icons";
 import ThemeToggle from "./ThemeToggle";
 
 const settingsItems = [
-  { href: "/settings/categories", label: "Categories", icon: IconSliders },
-  { href: "/settings/horses", label: "Horses", icon: IconHorse },
-  { href: "/settings/templates", label: "Templates", icon: IconClipboard },
-  { href: "/settings/weather", label: "Weather", icon: IconCloudSun },
-  { href: "/settings/keywords", label: "Keywords", icon: IconTag },
-  { href: "/settings/vendors", label: "Vendors", icon: IconStore },
-  { href: "/settings/integrations", label: "Integrations", icon: IconLink },
-  { href: "/settings/profile", label: "Profile", icon: IconUser },
+  { href: "/settings?tab=account", label: "Account", icon: IconSliders },
+  { href: "/settings?tab=barn", label: "Barn", icon: IconSliders },
+  { href: "/settings?tab=budget", label: "Budget", icon: IconSliders },
+  { href: "/settings?tab=system", label: "System", icon: IconSliders },
 ];
 
 export default function MobileMoreSheet({
@@ -35,6 +24,7 @@ export default function MobileMoreSheet({
   onClose: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,7 +66,9 @@ export default function MobileMoreSheet({
         {/* Navigation grid */}
         <div className="grid grid-cols-4 gap-1 px-4">
           {settingsItems.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const currentTab = searchParams.get("tab") || "account";
+            const itemTab = new URL(item.href, "http://x").searchParams.get("tab");
+            const active = pathname === "/settings" && currentTab === itemTab;
             return (
               <Link
                 key={item.href}

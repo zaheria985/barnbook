@@ -154,7 +154,7 @@ export default function WeatherDashboardPage() {
             Set WEATHERKIT_* environment variables to enable weather integration.
           </p>
           <Link
-            href="/settings/weather"
+            href="/settings?tab=barn"
             className="text-sm font-medium text-[var(--interactive)] hover:underline"
           >
             Configure Weather Settings &rarr;

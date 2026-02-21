@@ -9,7 +9,7 @@ interface Category {
   name: string;
 }
 
-export default function VendorMappingsPage() {
+export default function VendorsSection() {
   const [mappings, setMappings] = useState<VendorMapping[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,16 +106,8 @@ export default function VendorMappingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            Vendor Mappings
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Auto-categorize expenses by vendor name
-          </p>
-        </div>
+    <>
+      <div className="mb-4 flex justify-end">
         <button
           onClick={openAdd}
           className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] transition-colors"
@@ -233,6 +225,6 @@ export default function VendorMappingsPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }

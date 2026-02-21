@@ -7,7 +7,7 @@ import type { RideSlot } from "@/lib/queries/ride-schedule";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export default function WeatherSettingsPage() {
+export default function WeatherSection() {
   const [settings, setSettings] = useState<WeatherSettings | null>(null);
   const [schedule, setSchedule] = useState<RideSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,11 +124,7 @@ export default function WeatherSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
-      <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
-        Weather & Ride Settings
-      </h1>
-
+    <>
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
@@ -424,6 +420,6 @@ export default function WeatherSettingsPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -251,7 +251,7 @@ export default function RideEntryPage() {
           <p className="text-[var(--text-muted)]">
             No horses found.{" "}
             <a
-              href="/settings/horses"
+              href="/settings?tab=barn"
               className="text-[var(--interactive)] hover:underline"
             >
               Add a horse

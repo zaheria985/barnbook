@@ -10,7 +10,7 @@ type Profile = {
   weight_lbs: number | null;
 };
 
-export default function ProfilePage() {
+export default function ProfileSection() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState("");
   const [weight, setWeight] = useState("");
@@ -103,13 +103,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Profile
-        </h1>
-      </div>
-
+    <>
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
@@ -199,6 +193,6 @@ export default function ProfilePage() {
           </form>
         )}
       </div>
-    </div>
+    </>
   );
 }

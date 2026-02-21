@@ -31,7 +31,7 @@ interface IcloudSettings {
   write_calendar_id: string | null;
 }
 
-export default function IntegrationsSettingsPage() {
+export default function IntegrationsSection() {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -149,16 +149,7 @@ export default function IntegrationsSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Integrations
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          External service connections and status
-        </p>
-      </div>
-
+    <>
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
@@ -377,7 +368,7 @@ export default function IntegrationsSettingsPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

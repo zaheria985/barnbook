@@ -25,7 +25,7 @@ interface FormItem {
   sort_order: number;
 }
 
-export default function TemplatesSettingsPage() {
+export default function TemplatesSection() {
   const [templates, setTemplates] = useState<TemplateListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -178,16 +178,8 @@ export default function TemplatesSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            Checklist Templates
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Reusable checklists for event preparation
-          </p>
-        </div>
+    <>
+      <div className="flex justify-end mb-4">
         <button
           onClick={openAdd}
           className="rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] transition-colors"
@@ -378,6 +370,6 @@ export default function TemplatesSettingsPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }
