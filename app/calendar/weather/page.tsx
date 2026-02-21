@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { ScoredDay } from "@/lib/weather-rules";
+import type { Event } from "@/lib/queries/events";
 
 const SCORE_STYLES = {
   green: "bg-[var(--success-bg)] text-[var(--success-text)] border-[var(--success-border)]",
@@ -41,6 +42,14 @@ interface Forecast {
   }>;
 }
 
+function formatTime12h(time: string): string {
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return m === "00" ? `${display} ${suffix}` : `${display}:${m} ${suffix}`;
+}
+
 function getYesterdayDate(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -50,6 +59,7 @@ function getYesterdayDate(): string {
 export default function WeatherDashboardPage() {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [rideDays, setRideDays] = useState<ScoredDay[]>([]);
+  const [rideEvents, setRideEvents] = useState<Event[]>([]);
   const [alerts, setAlerts] = useState<WeatherAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
@@ -63,10 +73,16 @@ export default function WeatherDashboardPage() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [forecastRes, rideDaysRes, alertsRes] = await Promise.all([
+        const today = new Date().toISOString().split("T")[0];
+        const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+
+        const [forecastRes, rideDaysRes, alertsRes, eventsRes] = await Promise.all([
           fetch("/api/weather/forecast"),
           fetch("/api/weather/ride-days"),
           fetch("/api/weather/alerts"),
+          fetch(`/api/events?from=${today}&to=${weekFromNow}`),
         ]);
 
         if (forecastRes.status === 503) {
@@ -81,6 +97,11 @@ export default function WeatherDashboardPage() {
           setRideDays(scored);
         }
         if (alertsRes.ok) setAlerts(await alertsRes.json());
+
+        if (eventsRes.ok) {
+          const allEvents: Event[] = await eventsRes.json();
+          setRideEvents(allEvents.filter((e) => e.event_type === "ride"));
+        }
 
         // Check if we need yesterday's feedback
         const yesterday = getYesterdayDate();
@@ -302,6 +323,43 @@ export default function WeatherDashboardPage() {
                     <span className="mt-px">&#9789;</span>
                     <span>{day.notes.join(" · ")}</span>
                   </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Scheduled Rides */}
+      {rideEvents.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
+            Scheduled Rides
+          </h2>
+          <div className="space-y-2">
+            {rideEvents.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center justify-between rounded-lg border border-[var(--success-border)] bg-[var(--success-bg)] px-3 py-2"
+              >
+                <div>
+                  <span className="font-medium text-sm text-[var(--success-text)]">
+                    {new Date(event.start_date + "T00:00:00").toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  {event.start_time && event.end_time && (
+                    <span className="ml-2 text-xs text-[var(--success-text)] opacity-75">
+                      {formatTime12h(event.start_time)} &ndash; {formatTime12h(event.end_time)}
+                    </span>
+                  )}
+                </div>
+                {event.notes && (
+                  <p className="text-[10px] text-[var(--success-text)] opacity-75 text-right max-w-[50%] truncate">
+                    {event.notes}
+                  </p>
                 )}
               </div>
             ))}

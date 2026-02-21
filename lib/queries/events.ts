@@ -6,6 +6,8 @@ export interface Event {
   event_type: string;
   start_date: string;
   end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   location: string | null;
   entry_due_date: string | null;
   notes: string | null;
@@ -22,11 +24,14 @@ export interface CreateEventData {
   event_type: string;
   start_date: string;
   end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   location?: string | null;
   entry_due_date?: string | null;
   notes?: string | null;
   checklist_template_id?: string | null;
   created_by?: string | null;
+  is_confirmed?: boolean;
 }
 
 export interface UpdateEventData {
@@ -34,6 +39,8 @@ export interface UpdateEventData {
   event_type?: string;
   start_date?: string;
   end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   location?: string | null;
   entry_due_date?: string | null;
   notes?: string | null;
@@ -41,6 +48,10 @@ export interface UpdateEventData {
   vikunja_task_id?: string | null;
   is_confirmed?: boolean;
 }
+
+const EVENT_COLUMNS = `id, title, event_type, start_date, end_date, start_time, end_time,
+            location, entry_due_date, notes, checklist_template_id, vikunja_task_id,
+            is_confirmed, created_by, created_at, updated_at`;
 
 export async function getEvents(from?: string, to?: string): Promise<Event[]> {
   const conditions: string[] = [];
@@ -59,11 +70,9 @@ export async function getEvents(from?: string, to?: string): Promise<Event[]> {
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const res = await pool.query(
-    `SELECT id, title, event_type, start_date, end_date, location,
-            entry_due_date, notes, checklist_template_id, vikunja_task_id,
-            is_confirmed, created_by, created_at, updated_at
+    `SELECT ${EVENT_COLUMNS}
      FROM events ${where}
-     ORDER BY start_date, title`,
+     ORDER BY start_date, start_time NULLS LAST, title`,
     values
   );
   return res.rows;
@@ -71,9 +80,7 @@ export async function getEvents(from?: string, to?: string): Promise<Event[]> {
 
 export async function getEvent(id: string): Promise<Event | null> {
   const res = await pool.query(
-    `SELECT id, title, event_type, start_date, end_date, location,
-            entry_due_date, notes, checklist_template_id, vikunja_task_id,
-            is_confirmed, created_by, created_at, updated_at
+    `SELECT ${EVENT_COLUMNS}
      FROM events WHERE id = $1`,
     [id]
   );
@@ -82,22 +89,24 @@ export async function getEvent(id: string): Promise<Event | null> {
 
 export async function createEvent(data: CreateEventData): Promise<Event> {
   const res = await pool.query(
-    `INSERT INTO events (title, event_type, start_date, end_date, location,
-                         entry_due_date, notes, checklist_template_id, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING id, title, event_type, start_date, end_date, location,
-               entry_due_date, notes, checklist_template_id, vikunja_task_id,
-               is_confirmed, created_by, created_at, updated_at`,
+    `INSERT INTO events (title, event_type, start_date, end_date, start_time, end_time,
+                         location, entry_due_date, notes, checklist_template_id, created_by,
+                         is_confirmed)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     RETURNING ${EVENT_COLUMNS}`,
     [
       data.title,
       data.event_type,
       data.start_date,
       data.end_date ?? null,
+      data.start_time ?? null,
+      data.end_time ?? null,
       data.location ?? null,
       data.entry_due_date ?? null,
       data.notes ?? null,
       data.checklist_template_id ?? null,
       data.created_by ?? null,
+      data.is_confirmed ?? false,
     ]
   );
   return res.rows[0];
@@ -126,6 +135,14 @@ export async function updateEvent(
   if (data.end_date !== undefined) {
     fields.push(`end_date = $${idx++}`);
     values.push(data.end_date);
+  }
+  if (data.start_time !== undefined) {
+    fields.push(`start_time = $${idx++}`);
+    values.push(data.start_time);
+  }
+  if (data.end_time !== undefined) {
+    fields.push(`end_time = $${idx++}`);
+    values.push(data.end_time);
   }
   if (data.location !== undefined) {
     fields.push(`location = $${idx++}`);
@@ -159,9 +176,7 @@ export async function updateEvent(
 
   const res = await pool.query(
     `UPDATE events SET ${fields.join(", ")} WHERE id = $${idx}
-     RETURNING id, title, event_type, start_date, end_date, location,
-               entry_due_date, notes, checklist_template_id, vikunja_task_id,
-               is_confirmed, created_by, created_at, updated_at`,
+     RETURNING ${EVENT_COLUMNS}`,
     values
   );
   return res.rows[0] || null;

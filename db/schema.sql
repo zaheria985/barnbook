@@ -174,6 +174,8 @@ CREATE TABLE IF NOT EXISTS events (
   event_type TEXT NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE,
+  start_time TIME,
+  end_time TIME,
   location TEXT,
   entry_due_date DATE,
   notes TEXT,

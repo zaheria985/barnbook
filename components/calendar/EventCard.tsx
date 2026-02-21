@@ -9,6 +9,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   farrier: "Farrier",
   lesson: "Lesson",
   pony_club: "Pony Club",
+  ride: "Ride",
   other: "Other",
 };
 
@@ -18,8 +19,17 @@ const EVENT_TYPE_BADGE: Record<string, string> = {
   farrier: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
   lesson: "bg-[var(--success-bg)] text-[var(--accent-blue)]",
   pony_club: "bg-[var(--success-bg)] text-[var(--success-text)]",
+  ride: "bg-[var(--success-bg)] text-[var(--success-text)]",
   other: "bg-[var(--surface-muted)] text-[var(--text-secondary)]",
 };
+
+function formatTime12h(time: string): string {
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return m === "00" ? `${display} ${suffix}` : `${display}:${m} ${suffix}`;
+}
 
 export default function EventCard({ event }: { event: Event }) {
   return (
@@ -31,6 +41,11 @@ export default function EventCard({ event }: { event: Event }) {
         <p className="truncate font-medium text-sm text-[var(--text-primary)]">
           {event.title}
         </p>
+        {event.start_time && event.end_time && (
+          <p className="text-xs text-[var(--text-muted)]">
+            {formatTime12h(event.start_time)} &ndash; {formatTime12h(event.end_time)}
+          </p>
+        )}
         {event.location && (
           <p className="truncate text-xs text-[var(--text-muted)]">
             {event.location}

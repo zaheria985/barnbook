@@ -6,9 +6,10 @@ import {
   deleteSuggestedWindow,
   getIcloudSettings,
 } from "@/lib/queries/icloud-sync";
+import { createEvent } from "@/lib/queries/events";
 import { writeEvent, deleteEvent } from "@/lib/caldav";
 
-// Approve: write event to iCloud write calendar, then delete the window row
+// Approve: create a Barnbook event, write to iCloud if configured, delete the window row
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ windowId: string }> }
@@ -25,19 +26,37 @@ export async function POST(
       return NextResponse.json({ error: "Window not found" }, { status: 404 });
     }
 
+    // Create a confirmed Barnbook event with times
+    await createEvent({
+      title: "Ride Window",
+      event_type: "ride",
+      start_date: window.date,
+      start_time: window.start_time,
+      end_time: window.end_time,
+      notes: window.weather_notes.length > 0
+        ? window.weather_notes.join("; ")
+        : null,
+      is_confirmed: true,
+    });
+
+    // Write to iCloud write calendar if configured
     const settings = await getIcloudSettings();
     if (settings?.write_calendar_id) {
       const start = new Date(`${window.date}T${window.start_time}`);
       const end = new Date(`${window.date}T${window.end_time}`);
 
-      await writeEvent(settings.write_calendar_id, {
-        title: "Ride Window",
-        start,
-        end,
-        description: window.weather_notes.length > 0
-          ? window.weather_notes.join(", ")
-          : undefined,
-      });
+      try {
+        await writeEvent(settings.write_calendar_id, {
+          title: "Ride Window",
+          start,
+          end,
+          description: window.weather_notes.length > 0
+            ? window.weather_notes.join(", ")
+            : undefined,
+        });
+      } catch (err) {
+        console.error("Failed to write to iCloud, event still created locally:", err);
+      }
     }
 
     await deleteSuggestedWindow(windowId);
