@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ProfileSection from "@/components/settings/ProfileSection";
 import HorsesSection from "@/components/settings/HorsesSection";
@@ -73,7 +73,7 @@ function AccordionSection({
   );
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -147,13 +147,7 @@ export default function SettingsPage() {
   const currentSections = sections[activeTab];
 
   return (
-    <div className="mx-auto max-w-3xl pb-20 md:pb-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Settings
-        </h1>
-      </div>
-
+    <>
       {/* Tab bar */}
       <div className="mb-6 flex gap-1 rounded-xl bg-[var(--surface-muted)] p-1">
         {TAB_CONFIG.map((tab) => (
@@ -187,6 +181,27 @@ export default function SettingsPage() {
           </AccordionSection>
         ))}
       </div>
+    </>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <div className="mx-auto max-w-3xl pb-20 md:pb-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+          Settings
+        </h1>
+      </div>
+      <Suspense
+        fallback={
+          <div className="py-12 text-center text-[var(--text-muted)]">
+            Loading...
+          </div>
+        }
+      >
+        <SettingsContent />
+      </Suspense>
     </div>
   );
 }

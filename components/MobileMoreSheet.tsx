@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   IconSliders,
   IconX,
@@ -24,7 +24,6 @@ export default function MobileMoreSheet({
   onClose: () => void;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,9 +65,7 @@ export default function MobileMoreSheet({
         {/* Navigation grid */}
         <div className="grid grid-cols-4 gap-1 px-4">
           {settingsItems.map((item) => {
-            const currentTab = searchParams.get("tab") || "account";
-            const itemTab = new URL(item.href, "http://x").searchParams.get("tab");
-            const active = pathname === "/settings" && currentTab === itemTab;
+            const active = pathname === "/settings";
             return (
               <Link
                 key={item.href}
