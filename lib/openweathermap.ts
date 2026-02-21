@@ -36,6 +36,7 @@ export interface HourlyForecast {
   hour: string; // ISO timestamp
   pop: number; // 0-1 probability of precipitation
   rain_inches: number;
+  temp_f: number;
 }
 
 export interface WeatherForecast {
@@ -136,6 +137,7 @@ function transformResponse(raw: any): WeatherForecast {
         hour: h.dt ? new Date(h.dt * 1000).toISOString() : "",
         pop: h.pop ?? 0,
         rain_inches: mmToInches(rainMm + snowMm),
+        temp_f: Math.round(h.temp ?? 0),
       };
     }),
     daily: fd.map((d: any) => {

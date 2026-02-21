@@ -280,6 +280,27 @@ function checkDaytimeRain(
   return { skipDailyRain: true, reasons, notes, score };
 }
 
+/** Find the overnight low from 8pm today to 9am tomorrow using hourly data */
+function getOvernightLow(
+  dayDate: string,
+  nextDayDate: string | undefined,
+  hourly: HourlyForecast[],
+  tzOffset: number
+): number | null {
+  const overnightHours = hourly.filter((h) => {
+    const localHour = getLocalHour(h.hour, tzOffset);
+    const dateStr = h.hour.split("T")[0];
+    // 8pm-11pm on the current day
+    if (dateStr === dayDate && localHour >= 20) return true;
+    // 12am-8am on the next day
+    if (nextDayDate && dateStr === nextDayDate && localHour < 9) return true;
+    return false;
+  });
+
+  if (overnightHours.length === 0) return null;
+  return Math.min(...overnightHours.map((h) => h.temp_f));
+}
+
 export function scoreDays(
   forecasts: DayForecast[],
   settings: WeatherSettings,
@@ -328,6 +349,22 @@ export function scoreDays(
           `Footing soft \u2014 ${moisture.current_moisture}\u2033 moisture, ~${moisture.hours_to_dry}h to dry`
         );
       }
+    }
+
+    // Blanket check (side note only — does NOT affect ride score)
+    // Uses 8pm today → 9am tomorrow window when hourly data available
+    const nextDate = i + 1 < forecasts.length ? forecasts[i + 1].date : undefined;
+    const overnightLow = hourly && hourly.length > 0
+      ? getOvernightLow(f.date, nextDate, hourly, tzOffset)
+      : null;
+
+    if (overnightLow !== null) {
+      if (overnightLow <= settings.cold_alert_temp_f) {
+        scored.notes.push(`Tonight's low ${overnightLow}\u00B0F (8pm\u20139am) \u2014 blanket needed`);
+      }
+    } else if (f.low_f <= settings.cold_alert_temp_f) {
+      // Fallback to daily low when no hourly data
+      scored.notes.push(`Overnight low ${f.low_f}\u00B0F \u2014 blanket needed`);
     }
 
     // Replace default message if footing added a reason
@@ -382,11 +419,6 @@ export function scoreDay(
   } else if (forecast.day_f >= settings.heat_alert_temp_f - 10) {
     score = escalate(score, "yellow");
     reasons.push(`Warm: ${forecast.day_f}\u00B0F daytime`);
-  }
-
-  // Blanket check (overnight low — side note, does NOT affect ride score)
-  if (forecast.low_f <= settings.cold_alert_temp_f) {
-    notes.push(`Overnight low ${forecast.low_f}\u00B0F \u2014 blanket needed`);
   }
 
   // Wind check
