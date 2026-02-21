@@ -25,6 +25,7 @@ export interface WeatherAlert {
 export interface MoistureEstimate {
   current_moisture: number;
   hours_to_dry: number;
+  rain_today: number; // inches of rain contributing on this day
 }
 
 function evaporationRate(
@@ -72,6 +73,7 @@ export function estimateMoisture(
   return {
     current_moisture: Math.round(moisture * 100) / 100,
     hours_to_dry,
+    rain_today: Math.round(currentWeather.precipitation_inches * 100) / 100,
   };
 }
 
@@ -83,6 +85,7 @@ export function estimateFutureMoisture(
 ): MoistureEstimate {
   const base_evap = 1.0 / settings.footing_dry_hours_per_inch;
   let moisture = currentMoisture;
+  let rainOnTargetDay = 0;
 
   // Project forward through forecast days up to and including dayIndex
   for (let i = 0; i <= dayIndex && i < forecastDays.length; i++) {
@@ -94,6 +97,7 @@ export function estimateFutureMoisture(
       const probRain = (day.precipitation_chance / 100) * settings.rain_cutoff_inches;
       const rainToAdd = Math.max(day.precipitation_inches, probRain);
       moisture += rainToAdd;
+      if (i === dayIndex) rainOnTargetDay = rainToAdd;
     }
 
     // Apply 24 hours of drying for each full day
@@ -103,13 +107,40 @@ export function estimateFutureMoisture(
     if (moisture < 0) moisture = 0;
   }
 
-  const targetDay = forecastDays[Math.min(dayIndex, forecastDays.length - 1)];
-  const evap = evaporationRate(targetDay.clouds_pct, targetDay.high_f, targetDay.wind_speed_mph, base_evap);
-  const hours_to_dry = evap > 0 ? Math.ceil(moisture / evap) : moisture > 0 ? 999 : 0;
+  // Simulate forward through remaining forecast days to get realistic hours_to_dry
+  let hours_to_dry = 0;
+  if (moisture > 0) {
+    let dryMoisture = moisture;
+    for (let j = dayIndex; j < forecastDays.length && dryMoisture > 0; j++) {
+      const day = forecastDays[j];
+      const evap = evaporationRate(day.clouds_pct, day.high_f, day.wind_speed_mph, base_evap);
+      // First day: remaining 12h (we already used 12h). Subsequent: full 24h.
+      const hoursAvailable = j === dayIndex ? 12 : 24;
+      if (evap > 0) {
+        const hoursNeeded = dryMoisture / evap;
+        if (hoursNeeded <= hoursAvailable) {
+          hours_to_dry += Math.ceil(hoursNeeded);
+          dryMoisture = 0;
+        } else {
+          hours_to_dry += hoursAvailable;
+          dryMoisture -= evap * hoursAvailable;
+        }
+      } else {
+        hours_to_dry += hoursAvailable;
+      }
+    }
+    // If still not dry after all forecast days, estimate remainder with last day's rate
+    if (dryMoisture > 0) {
+      const lastDay = forecastDays[forecastDays.length - 1];
+      const lastEvap = evaporationRate(lastDay.clouds_pct, lastDay.high_f, lastDay.wind_speed_mph, base_evap);
+      hours_to_dry += lastEvap > 0 ? Math.ceil(dryMoisture / lastEvap) : 999;
+    }
+  }
 
   return {
     current_moisture: Math.round(moisture * 100) / 100,
     hours_to_dry,
+    rain_today: Math.round(rainOnTargetDay * 100) / 100,
   };
 }
 
@@ -338,15 +369,21 @@ export function scoreDays(
         ? todayMoisture
         : estimateFutureMoisture(todayMoisture.current_moisture, i, forecasts, settings);
 
+      const rainCtx = moisture.rain_today > 0
+        ? ` (${moisture.rain_today}\u2033 rain forecast)`
+        : i === 0 && currentWeather.precipitation_inches > 0
+          ? " (recent rain)"
+          : " (accumulated moisture)";
+
       if (moisture.current_moisture >= settings.footing_danger_inches) {
         scored.score = escalate(scored.score, "red");
         scored.reasons.unshift(
-          `Footing unsafe \u2014 ${moisture.current_moisture}\u2033 moisture, ~${moisture.hours_to_dry}h to dry`
+          `Footing unsafe \u2014 ${moisture.current_moisture}\u2033 moisture${rainCtx}, ~${moisture.hours_to_dry}h to dry`
         );
       } else if (moisture.current_moisture >= settings.footing_caution_inches) {
         scored.score = escalate(scored.score, "yellow");
         scored.reasons.unshift(
-          `Footing soft \u2014 ${moisture.current_moisture}\u2033 moisture, ~${moisture.hours_to_dry}h to dry`
+          `Footing soft \u2014 ${moisture.current_moisture}\u2033 moisture${rainCtx}, ~${moisture.hours_to_dry}h to dry`
         );
       }
     }
