@@ -11,12 +11,23 @@ import BudgetBarChart from "@/components/budget/BudgetBarChart";
 import YearlySummary from "@/components/budget/YearlySummary";
 import type { CategoryOverview } from "@/lib/queries/budget-overview";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import type { SpendingTrend } from "@/lib/queries/expense-trends";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
   }).format(n);
+}
+
+function getTrailing12Months(): string[] {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return months;
 }
 
 interface OverviewData {
@@ -44,19 +55,73 @@ export default function BudgetPage() {
   const [applying, setApplying] = useState(false);
   const [templateList, setTemplateList] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [categoryTrends, setCategoryTrends] = useState<Map<string, number[]>>(new Map());
+  const [subItemTrendsMap, setSubItemTrendsMap] = useState<Map<string, Record<string, number[]>>>(new Map());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [overviewRes, catRes] = await Promise.all([
+      const [overviewRes, catRes, trendsRes] = await Promise.all([
         fetch(`/api/budget/overview?month=${month}`),
         fetch("/api/budget/categories"),
+        fetch("/api/budget/trends"),
       ]);
       if (!overviewRes.ok) throw new Error("Failed to fetch");
       const json = await overviewRes.json();
       setData(json);
       if (catRes.ok) {
         setBudgetCategories(await catRes.json());
+      }
+      if (trendsRes.ok) {
+        const trends: SpendingTrend[] = await trendsRes.json();
+        const trailing12 = getTrailing12Months();
+
+        // Build category-level map
+        const catMap = new Map<string, Map<string, number>>();
+        // Build sub-item-level map
+        const subMap = new Map<string, Map<string, Map<string, number>>>();
+
+        for (const row of trends) {
+          // Category-level aggregation (includes sub-item spending)
+          if (!catMap.has(row.category_id)) {
+            catMap.set(row.category_id, new Map());
+          }
+          const catMonths = catMap.get(row.category_id)!;
+          catMonths.set(row.month, (catMonths.get(row.month) || 0) + row.spent);
+
+          // Sub-item-level
+          if (row.sub_item_id) {
+            if (!subMap.has(row.category_id)) {
+              subMap.set(row.category_id, new Map());
+            }
+            const catSubs = subMap.get(row.category_id)!;
+            if (!catSubs.has(row.sub_item_id)) {
+              catSubs.set(row.sub_item_id, new Map());
+            }
+            const subMonths = catSubs.get(row.sub_item_id)!;
+            subMonths.set(row.month, (subMonths.get(row.month) || 0) + row.spent);
+          }
+        }
+
+        // Zero-fill and convert to arrays
+        const categoryTrendResult = new Map<string, number[]>();
+        for (const [catId, monthMap] of catMap) {
+          categoryTrendResult.set(
+            catId,
+            trailing12.map((m) => monthMap.get(m) || 0)
+          );
+        }
+        setCategoryTrends(categoryTrendResult);
+
+        const subItemTrendResult = new Map<string, Record<string, number[]>>();
+        for (const [catId, subsMap] of subMap) {
+          const record: Record<string, number[]> = {};
+          for (const [subId, monthMap] of subsMap) {
+            record[subId] = trailing12.map((m) => monthMap.get(m) || 0);
+          }
+          subItemTrendResult.set(catId, record);
+        }
+        setSubItemTrendsMap(subItemTrendResult);
       }
     } catch {
       setError("Failed to load budget overview");
@@ -293,6 +358,8 @@ export default function BudgetPage() {
             categories={budgetCategories}
             onBudgetEdit={handleBudgetEdit}
             onExpenseChanged={fetchData}
+            trendData={categoryTrends.get(cat.category_id)}
+            subItemTrends={subItemTrendsMap.get(cat.category_id)}
           />
         ))}
       </div>

@@ -5,6 +5,7 @@ import type { CategoryOverview } from "@/lib/queries/budget-overview";
 import type { Expense } from "@/lib/queries/expenses";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
 import ExpenseTable from "./ExpenseTable";
+import Sparkline from "./Sparkline";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -42,12 +43,16 @@ export default function CategoryCard({
   categories,
   onBudgetEdit,
   onExpenseChanged,
+  trendData,
+  subItemTrends,
 }: {
   category: CategoryOverview;
   month?: string;
   categories?: BudgetCategory[];
   onBudgetEdit?: (categoryId: string, subItemId: string | null, amount: number) => void;
   onExpenseChanged?: () => void;
+  trendData?: number[];
+  subItemTrends?: Record<string, number[]>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -189,6 +194,12 @@ export default function CategoryCard({
         </div>
       </div>
 
+      {trendData && trendData.length > 0 && (
+        <div className="mt-2 flex items-center justify-end">
+          <Sparkline data={trendData} />
+        </div>
+      )}
+
       <ProgressBar spent={category.spent} budgeted={category.budgeted} />
 
       {expanded && (
@@ -204,49 +215,58 @@ export default function CategoryCard({
                   <span className="text-sm text-[var(--text-secondary)]">
                     {sub.sub_item_label}
                   </span>
-                  {editingSubItemId === sub.sub_item_id ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[var(--text-muted)]">$</span>
-                      <input
-                        type="number"
-                        value={subEditValue}
-                        onChange={(e) => setSubEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSubItemSave(sub.sub_item_id!);
-                          if (e.key === "Escape") setEditingSubItemId(null);
-                        }}
-                        autoFocus
-                        className="w-20 rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-right text-sm"
+                  <div className="flex items-center gap-2">
+                    {sub.sub_item_id && subItemTrends?.[sub.sub_item_id] && (
+                      <Sparkline
+                        data={subItemTrends[sub.sub_item_id]}
+                        width={60}
+                        height={22}
                       />
+                    )}
+                    {editingSubItemId === sub.sub_item_id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[var(--text-muted)]">$</span>
+                        <input
+                          type="number"
+                          value={subEditValue}
+                          onChange={(e) => setSubEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSubItemSave(sub.sub_item_id!);
+                            if (e.key === "Escape") setEditingSubItemId(null);
+                          }}
+                          autoFocus
+                          className="w-20 rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-right text-sm"
+                        />
+                        <button
+                          onClick={() => handleSubItemSave(sub.sub_item_id!)}
+                          className="text-xs text-[var(--interactive)] hover:underline"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        onClick={() => handleSubItemSave(sub.sub_item_id!)}
-                        className="text-xs text-[var(--interactive)] hover:underline"
+                        onClick={() => {
+                          setEditingSubItemId(sub.sub_item_id);
+                          setSubEditValue(String(sub.budgeted));
+                        }}
+                        className="text-right"
                       >
-                        Save
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {formatCurrency(sub.budgeted)}
+                        </p>
+                        <p
+                          className={`text-sm ${
+                            sub.spent > sub.budgeted
+                              ? "text-[var(--error-text)]"
+                              : "text-[var(--text-primary)]"
+                          }`}
+                        >
+                          {formatCurrency(sub.spent)}
+                        </p>
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setEditingSubItemId(sub.sub_item_id);
-                        setSubEditValue(String(sub.budgeted));
-                      }}
-                      className="text-right"
-                    >
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {formatCurrency(sub.budgeted)}
-                      </p>
-                      <p
-                        className={`text-sm ${
-                          sub.spent > sub.budgeted
-                            ? "text-[var(--error-text)]"
-                            : "text-[var(--text-primary)]"
-                        }`}
-                      >
-                        {formatCurrency(sub.spent)}
-                      </p>
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
