@@ -4,7 +4,7 @@ import { getSettings } from "@/lib/queries/weather-settings";
 import { getKeywords } from "@/lib/queries/detection-keywords";
 import { createEvent } from "@/lib/queries/events";
 import { getSchedule } from "@/lib/queries/ride-schedule";
-import { isConfigured as weatherConfigured, getForecast, getRecentRain } from "@/lib/openweathermap";
+import { isConfigured as weatherConfigured, getForecast, getRecentRain, getLocalHour } from "@/lib/openweathermap";
 import { scoreDays } from "@/lib/weather-rules";
 import {
   getIcloudSettings,
@@ -109,13 +109,16 @@ export async function POST(request: NextRequest) {
         getRecentRain(lat, lng, weatherSettings.rain_window_hours).catch(() => []),
       ]);
 
+      const tzOffset = forecast.timezone_offset;
+
       const scored = scoreDays(
         forecast.daily,
         weatherSettings,
         recentRain,
         forecast.current,
         forecast.hourly,
-        rideSlots
+        rideSlots,
+        tzOffset
       );
 
       // Build busy times from iCloud events
@@ -144,12 +147,12 @@ export async function POST(request: NextRequest) {
         const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
         const scheduledSlots = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
 
-        // Get sunrise/sunset for daylight bounds
+        // Get sunrise/sunset for daylight bounds (using local timezone)
         const sunriseHour = day.forecast.sunrise
-          ? new Date(day.forecast.sunrise).getHours()
+          ? getLocalHour(day.forecast.sunrise, tzOffset)
           : 6;
         const sunsetHour = day.forecast.sunset
-          ? new Date(day.forecast.sunset).getHours()
+          ? getLocalHour(day.forecast.sunset, tzOffset)
           : 20;
 
         // If ride schedule has slots for this day, use those.

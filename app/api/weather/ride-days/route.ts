@@ -43,7 +43,7 @@ export async function GET() {
 
     const scored = scoreDays(
       forecast.daily, settings, recentRain, forecast.current,
-      forecast.hourly, rideSlots
+      forecast.hourly, rideSlots, forecast.timezone_offset
     );
 
     // Fire-and-forget: snapshot predictions + prune old snapshots

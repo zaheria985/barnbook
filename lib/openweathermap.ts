@@ -42,6 +42,14 @@ export interface WeatherForecast {
   current: CurrentWeather;
   daily: DayForecast[];
   hourly: HourlyForecast[];
+  timezone_offset: number; // seconds east of UTC
+}
+
+/** Extract the local hour from a UTC ISO timestamp given a timezone offset (seconds east of UTC) */
+export function getLocalHour(isoTimestamp: string, tzOffsetSec: number): number {
+  const utcMs = new Date(isoTimestamp).getTime();
+  const localMs = utcMs + tzOffsetSec * 1000;
+  return new Date(localMs).getUTCHours();
 }
 
 export interface HourlyRain {
@@ -108,6 +116,7 @@ function transformResponse(raw: any): WeatherForecast {
   const currentPrecipMm = currentRainMm + currentSnowMm;
 
   return {
+    timezone_offset: raw.timezone_offset ?? 0,
     current: {
       temperature_f: Math.round(cw.temp ?? 0),
       feels_like_f: Math.round(cw.feels_like ?? 0),

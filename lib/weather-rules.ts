@@ -2,6 +2,7 @@
 // Scores each day as "green" (good), "yellow" (caution), or "red" (no-go)
 
 import type { DayForecast, CurrentWeather, HourlyRain, HourlyForecast } from "./openweathermap";
+import { getLocalHour } from "./openweathermap";
 import type { WeatherSettings } from "./queries/weather-settings";
 import type { RideSlot } from "./queries/ride-schedule";
 
@@ -134,14 +135,15 @@ function formatHour12h(hour: number): string {
 function summarizeRainWindow(
   dayHourly: HourlyForecast[],
   sunriseHour: number,
-  sunsetHour: number
+  sunsetHour: number,
+  tzOffset = 0
 ): string | null {
   if (dayHourly.length === 0) return null;
 
   // Find hours with rain (rain_inches > 0 or pop > 0.5)
   const rainHours = dayHourly
     .filter((h) => h.rain_inches > 0 || h.pop > 0.5)
-    .map((h) => new Date(h.hour).getHours())
+    .map((h) => getLocalHour(h.hour, tzOffset))
     .sort((a, b) => a - b);
 
   if (rainHours.length === 0) return null;
@@ -194,7 +196,8 @@ function checkDaytimeRain(
   forecast: DayForecast,
   hourly: HourlyForecast[],
   rideSlots: RideSlot[],
-  settings: WeatherSettings
+  settings: WeatherSettings,
+  tzOffset = 0
 ): { skipDailyRain: boolean; reasons: string[]; notes: string[]; score: RideScore } {
   // Filter hourly data to this day
   const dayHourly = hourly.filter((h) => h.hour.startsWith(dayDate));
@@ -203,15 +206,15 @@ function checkDaytimeRain(
   }
 
   // Filter to daytime hours (sunrise to sunset)
-  const sunriseHour = forecast.sunrise ? new Date(forecast.sunrise).getHours() : 6;
-  const sunsetHour = forecast.sunset ? new Date(forecast.sunset).getHours() : 20;
+  const sunriseHour = forecast.sunrise ? getLocalHour(forecast.sunrise, tzOffset) : 6;
+  const sunsetHour = forecast.sunset ? getLocalHour(forecast.sunset, tzOffset) : 20;
   const daytimeHourly = dayHourly.filter((h) => {
-    const hour = new Date(h.hour).getHours();
+    const hour = getLocalHour(h.hour, tzOffset);
     return hour >= sunriseHour && hour < sunsetHour;
   });
 
   // Get rain timing summary for the full day
-  const rainSummary = summarizeRainWindow(dayHourly, sunriseHour, sunsetHour);
+  const rainSummary = summarizeRainWindow(dayHourly, sunriseHour, sunsetHour, tzOffset);
 
   if (daytimeHourly.length === 0) {
     const notes: string[] = [];
@@ -283,7 +286,8 @@ export function scoreDays(
   recentRain?: HourlyRain[],
   currentWeather?: CurrentWeather,
   hourly?: HourlyForecast[],
-  rideSlots?: RideSlot[]
+  rideSlots?: RideSlot[],
+  tzOffset = 0
 ): ScoredDay[] {
   // Calculate today's moisture if we have rain data
   let todayMoisture: MoistureEstimate | undefined;
@@ -295,7 +299,7 @@ export function scoreDays(
     // For days 0-1 with hourly data, filter rain to daytime (sunrise-sunset)
     let scored: ScoredDay;
     if (i <= 1 && hourly && hourly.length > 0) {
-      const hourlyResult = checkDaytimeRain(f.date, f, hourly, rideSlots ?? [], settings);
+      const hourlyResult = checkDaytimeRain(f.date, f, hourly, rideSlots ?? [], settings, tzOffset);
       scored = scoreDay(f, settings, hourlyResult.skipDailyRain);
       if (hourlyResult.reasons.length > 0) {
         scored.score = escalate(scored.score, hourlyResult.score);
