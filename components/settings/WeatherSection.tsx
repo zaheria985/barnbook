@@ -78,8 +78,18 @@ export default function WeatherSection() {
       });
       if (!res.ok) throw new Error("Failed to save");
       setSettings(await res.json());
-      setSuccess("Settings saved");
-      setTimeout(() => setSuccess(""), 3000);
+      setSuccess("Settings saved — recalculating weather scores...");
+      // Trigger recalculation with new settings (updates snapshots + blanket checks)
+      fetch("/api/weather/ride-days")
+        .then((r) => r.ok ? r.json() : null)
+        .then(() => {
+          setSuccess("Settings saved — weather scores updated");
+          setTimeout(() => setSuccess(""), 3000);
+        })
+        .catch(() => {
+          setSuccess("Settings saved");
+          setTimeout(() => setSuccess(""), 3000);
+        });
     } catch {
       setError("Failed to save settings");
     } finally {
