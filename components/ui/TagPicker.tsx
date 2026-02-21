@@ -42,7 +42,7 @@ export default function TagPicker({
       const url = tagType ? `/api/tags?type=${tagType}` : "/api/tags";
       const res = await fetch(url);
       if (res.ok) setAllTags(await res.json());
-    } catch { /* ignore */ }
+    } catch (err) { console.error("TagPicker fetch failed:", err); }
   }, [tagType]);
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function TagPicker({
         selectTag(tag);
         await fetchTags();
       }
-    } catch { /* ignore */ }
+    } catch (err) { console.error("TagPicker fetch failed:", err); }
     setCreating(false);
   }
 
@@ -142,7 +142,7 @@ export default function TagPicker({
         className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)]"
       />
 
-      {showDropdown && (filtered.length > 0 || (allowCreate && query.trim() && !exactMatch)) && (
+      {showDropdown && (filtered.length > 0 || allowCreate) && (
         <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg">
           {filtered.slice(0, 10).map((tag) => (
             <li key={tag.id}>
@@ -173,6 +173,11 @@ export default function TagPicker({
               >
                 {creating ? "Creating..." : `+ Create "${query.trim()}"`}
               </button>
+            </li>
+          )}
+          {allowCreate && !query.trim() && filtered.length === 0 && (
+            <li className="px-4 py-2 text-sm text-[var(--text-secondary)]">
+              Type to search or create...
             </li>
           )}
         </ul>
