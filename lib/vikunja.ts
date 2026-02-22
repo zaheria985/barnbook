@@ -37,7 +37,13 @@ export async function createTask(data: {
     body: JSON.stringify({
       title: data.title,
       description: data.description || "",
-      due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
+      due_date: data.due_date
+        ? (() => {
+            // Extract date part and use noon UTC to avoid timezone date shifts
+            const d = String(data.due_date).split("T")[0];
+            return `${d}T12:00:00.000Z`;
+          })()
+        : null,
     }),
   });
 
