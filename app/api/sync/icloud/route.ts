@@ -7,6 +7,7 @@ import { createEvent } from "@/lib/queries/events";
 import { getSchedule } from "@/lib/queries/ride-schedule";
 import { isConfigured as weatherConfigured, getForecast, getRecentRain, getLocalHour } from "@/lib/openweathermap";
 import { scoreDays } from "@/lib/weather-rules";
+import pool from "@/lib/db";
 import {
   getIcloudSettings,
   getSyncState,
@@ -333,10 +334,76 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Auto-push confirmed event checklists to Vikunja ---
+    let checklistsPushed = 0;
+    if (vikunja.isConfigured()) {
+      try {
+        const { getChecklist } = await import("@/lib/queries/event-checklists");
+        const { getProjectId } = await import("@/lib/queries/vikunja-projects");
+
+        // Find confirmed events with checklists that haven't been pushed
+        const unpushed = await pool.query(
+          `SELECT DISTINCT e.id, e.title, e.event_type, e.start_date, e.location
+           FROM events e
+           JOIN event_checklists ec ON ec.event_id = e.id
+           WHERE e.is_confirmed = true
+             AND e.vikunja_task_id IS NULL
+             AND e.start_date >= CURRENT_DATE`,
+        );
+
+        for (const event of unpushed.rows) {
+          try {
+            const projectId = await getProjectId("event_checklists");
+            const mainTask = await vikunja.createTask({
+              title: event.title,
+              description: `${event.event_type} | ${event.location || "No location"}`,
+              due_date: event.start_date,
+              project_id: projectId,
+            });
+
+            await pool.query(
+              `INSERT INTO vikunja_task_map (vikunja_task_id, event_id, sync_type)
+               VALUES ($1, $2, 'push')`,
+              [String(mainTask.id), event.id]
+            );
+            await pool.query(
+              `UPDATE events SET vikunja_task_id = $1 WHERE id = $2`,
+              [String(mainTask.id), event.id]
+            );
+
+            const checklist = await getChecklist(event.id);
+            for (const item of checklist) {
+              const subTask = await vikunja.createTask({
+                title: item.title,
+                due_date: item.due_date,
+                project_id: projectId,
+              });
+              await pool.query(
+                `INSERT INTO vikunja_task_map (vikunja_task_id, checklist_id, sync_type)
+                 VALUES ($1, $2, 'push')`,
+                [String(subTask.id), item.id]
+              );
+              await pool.query(
+                `UPDATE event_checklists SET vikunja_task_id = $1 WHERE id = $2`,
+                [String(subTask.id), item.id]
+              );
+            }
+
+            checklistsPushed++;
+          } catch (err) {
+            console.error(`Failed to auto-push checklist for event ${event.id}:`, err);
+          }
+        }
+      } catch (err) {
+        console.error("Checklist auto-push failed:", err);
+      }
+    }
+
     return NextResponse.json({
       events_found: icalEvents.length,
       keywords_matched: keywordsMatched,
       windows_suggested: windowsSuggested,
+      checklists_pushed: checklistsPushed,
     });
   } catch (error) {
     console.error("iCloud sync failed:", error);
