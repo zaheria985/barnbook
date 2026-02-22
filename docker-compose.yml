@@ -35,5 +35,21 @@ services:
       timeout: 5s
       retries: 5
 
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      ICLOUD_SYNC_SECRET: ${ICLOUD_SYNC_SECRET}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        apk add --no-cache curl > /dev/null 2>&1
+        echo "0 */2 * * * curl -sf -X POST http://app:3500/api/sync/icloud -H \"Authorization: Bearer $$ICLOUD_SYNC_SECRET\" > /proc/1/fd/1 2>&1" | crontab -
+        crond -f -l 6
+
 volumes:
   barnbook_data:
