@@ -99,10 +99,7 @@ export default function EventDetailPage() {
       const res = await fetch("/api/sync/vikunja", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event_id: id,
-          project_id: Number(process.env.NEXT_PUBLIC_VIKUNJA_PROJECT_ID || "1"),
-        }),
+        body: JSON.stringify({ event_id: id }),
       });
       if (res.status === 503) {
         setSyncStatus("not_configured");
