@@ -16,7 +16,7 @@ Barnbook — Next.js 14 equestrian management app (TypeScript, PostgreSQL, Tailw
 - Migrations: `db/migrations/NNN_name.sql` — numbered sequentially
 
 ## Gotchas
-- **Date formatting**: PostgreSQL DATE values JSON-serialize as `"2026-02-21T00:00:00.000Z"`. Always use `.split("T")[0]` before appending `"T00:00:00"` for client-side Date parsing.
+- **Date formatting**: PostgreSQL DATE values JSON-serialize as `"2026-02-21T00:00:00.000Z"` and node-postgres returns them as JS Date objects server-side. For client-side display: use `.split("T")[0]` + `"T12:00:00"` (noon, NOT midnight — midnight UTC shifts to the previous day in US timezones). For server-side Vikunja/API calls: use `toNoonUTC()` from `lib/vikunja.ts` which handles both Date objects and strings.
 - **Timezone**: OpenWeatherMap timestamps are UTC. Use `getLocalHour(isoTimestamp, tzOffset)` from `lib/openweathermap.ts` — never raw `new Date(iso).getHours()`.
 - **Route params**: Use `{ params }: { params: Promise<{ id: string }> }` with `await params` (not direct destructuring).
 
