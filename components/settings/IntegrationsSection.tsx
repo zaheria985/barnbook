@@ -18,6 +18,7 @@ interface IcloudCalendar {
   id: string;
   name: string;
   color: string | null;
+  type: "calendar" | "reminders";
 }
 
 interface IcloudSettings {
@@ -182,7 +183,7 @@ export default function IntegrationsSection() {
                       Read calendars (event detection)
                     </label>
                     <div className="space-y-1">
-                      {calendars.map((cal) => (
+                      {calendars.filter((c) => c.type === "calendar").map((cal) => (
                         <label key={cal.id} className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
@@ -216,7 +217,7 @@ export default function IntegrationsSection() {
                       className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                     >
                       <option value="">None (don&apos;t write ride windows)</option>
-                      {calendars.map((cal) => (
+                      {calendars.filter((c) => c.type === "calendar").map((cal) => (
                         <option key={cal.id} value={cal.id}>
                           {cal.name}
                         </option>
@@ -238,7 +239,7 @@ export default function IntegrationsSection() {
                       className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                     >
                       <option value="">None (don&apos;t sync reminders)</option>
-                      {calendars.map((cal) => (
+                      {calendars.filter((c) => c.type === "reminders").map((cal) => (
                         <option key={cal.id} value={cal.id}>
                           {cal.name}
                         </option>

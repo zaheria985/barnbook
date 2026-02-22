@@ -7,6 +7,7 @@ export interface CalendarInfo {
   id: string;
   name: string;
   color: string | null;
+  type: "calendar" | "reminders";
 }
 
 export interface CalendarEvent {
@@ -152,6 +153,7 @@ export async function listCalendars(): Promise<CalendarInfo[]> {
     id: cal.url,
     name: (cal.displayName as string) || "Untitled",
     color: (cal as Record<string, unknown>).calendarColor as string | null ?? null,
+    type: (cal.components?.includes("VTODO") ? "reminders" : "calendar") as "calendar" | "reminders",
   }));
 }
 
