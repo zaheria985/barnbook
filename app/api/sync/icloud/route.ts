@@ -13,6 +13,7 @@ import {
   getSyncState,
   upsertSyncState,
   replaceSuggestedWindows,
+  getSuggestedWindows,
 } from "@/lib/queries/icloud-sync";
 
 export async function POST(request: NextRequest) {
@@ -256,6 +257,26 @@ export async function POST(request: NextRequest) {
             avg_temp_f: avgTempF,
             ical_uid: null,
           });
+        }
+      }
+
+      // Clean up any stale ride window events from iCloud
+      if (icloudSettings.write_calendar_id) {
+        const existingWindows = await getSuggestedWindows(
+          from.toISOString().split("T")[0],
+          to.toISOString().split("T")[0]
+        );
+        for (const existing of existingWindows) {
+          if (existing.ical_uid) {
+            try {
+              await caldav.deleteEvent(
+                icloudSettings.write_calendar_id,
+                existing.ical_uid
+              );
+            } catch {
+              // Event may already be gone
+            }
+          }
         }
       }
 
