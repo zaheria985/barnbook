@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as caldav from "@/lib/caldav";
+import * as vikunja from "@/lib/vikunja";
 import { getSettings } from "@/lib/queries/weather-settings";
 import { getKeywords } from "@/lib/queries/detection-keywords";
 import { createEvent } from "@/lib/queries/events";
@@ -49,9 +50,9 @@ export async function POST(request: NextRequest) {
     const from = new Date(now);
     from.setHours(0, 0, 0, 0);
     const to = new Date(from);
-    to.setDate(to.getDate() + 7);
+    to.setDate(to.getDate() + 30);
 
-    // Fetch all iCloud events for the next 7 days
+    // Fetch all iCloud events for the next 30 days
     const icalEvents = await caldav.fetchEvents(
       icloudSettings.read_calendar_ids,
       from,
@@ -120,6 +121,36 @@ export async function POST(request: NextRequest) {
         rideSlots,
         tzOffset
       );
+
+      // --- Blanket reminders ---
+      if (vikunja.isConfigured()) {
+        const { getReminder, createReminder, deleteOldReminders } = await import("@/lib/queries/blanket-reminders");
+        const { getProjectId } = await import("@/lib/queries/vikunja-projects");
+
+        // Clean up old reminders
+        await deleteOldReminders();
+
+        for (const day of scored) {
+          if (day.blanket_low_f === null) continue;
+
+          // Check if already reminded
+          const existing = await getReminder(day.date);
+          if (existing) continue;
+
+          try {
+            const projectId = await getProjectId("weather_alerts");
+            const task = await vikunja.createTask({
+              title: `\uD83D\uDC34 Put blanket on tonight \u2014 low ${day.blanket_low_f}\u00B0F`,
+              due_date: `${day.date}T18:00:00`,
+              project_id: projectId,
+            });
+            await createReminder(day.date, day.blanket_low_f, String(task.id));
+          } catch (err) {
+            console.error("Failed to create blanket reminder:", err);
+            // Fire-and-forget — don't block sync
+          }
+        }
+      }
 
       // Build busy times from iCloud events
       const busySlots = icalEvents

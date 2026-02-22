@@ -47,6 +47,12 @@ export default function IntegrationsSection() {
   const [icloudSyncing, setIcloudSyncing] = useState(false);
   const [icloudMessage, setIcloudMessage] = useState("");
 
+  // Vikunja project mapping state
+  const [vikunjaEventChecklistsId, setVikunjaEventChecklistsId] = useState("");
+  const [vikunjaWeatherAlertsId, setVikunjaWeatherAlertsId] = useState("");
+  const [vikunjaSaving, setVikunjaSaving] = useState(false);
+  const [vikunjaMessage, setVikunjaMessage] = useState("");
+
   const fetchCalendars = useCallback(async () => {
     setCalendarsLoading(true);
     try {
@@ -83,6 +89,11 @@ export default function IntegrationsSection() {
         // If iCloud is configured, fetch calendars
         if (data.icloud?.configured) {
           fetchCalendars();
+        }
+
+        // If Vikunja is connected, fetch project mappings
+        if (data.vikunja?.connected) {
+          fetchVikunjaProjects();
         }
       } catch {
         setError("Failed to load integration status");
@@ -128,6 +139,66 @@ export default function IntegrationsSection() {
       setIcloudMessage(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setIcloudSyncing(false);
+    }
+  }
+
+  async function fetchVikunjaProjects() {
+    try {
+      const res = await fetch("/api/settings/vikunja-projects");
+      if (res.ok) {
+        const data = await res.json();
+        for (const mapping of data.mappings || []) {
+          if (mapping.category === "event_checklists") {
+            setVikunjaEventChecklistsId(String(mapping.project_id));
+          } else if (mapping.category === "weather_alerts") {
+            setVikunjaWeatherAlertsId(String(mapping.project_id));
+          }
+        }
+      }
+    } catch {
+      // Failed to fetch — fields will show placeholder
+    }
+  }
+
+  async function saveVikunjaProjects() {
+    setVikunjaSaving(true);
+    setVikunjaMessage("");
+    try {
+      const mappings = [];
+      if (vikunjaEventChecklistsId.trim()) {
+        const id = Number(vikunjaEventChecklistsId.trim());
+        if (isNaN(id) || id <= 0) {
+          setVikunjaMessage("Event Checklists must be a positive number");
+          setVikunjaSaving(false);
+          return;
+        }
+        mappings.push({ category: "event_checklists", project_id: id });
+      }
+      if (vikunjaWeatherAlertsId.trim()) {
+        const id = Number(vikunjaWeatherAlertsId.trim());
+        if (isNaN(id) || id <= 0) {
+          setVikunjaMessage("Weather Alerts must be a positive number");
+          setVikunjaSaving(false);
+          return;
+        }
+        mappings.push({ category: "weather_alerts", project_id: id });
+      }
+      if (mappings.length === 0) {
+        setVikunjaMessage("No project IDs to save");
+        setVikunjaSaving(false);
+        return;
+      }
+      const res = await fetch("/api/settings/vikunja-projects", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mappings }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      setVikunjaMessage("Project mappings saved");
+    } catch {
+      setVikunjaMessage("Failed to save project mappings");
+    } finally {
+      setVikunjaSaving(false);
     }
   }
 
@@ -278,24 +349,74 @@ export default function IntegrationsSection() {
             />
           </div>
           {status?.vikunja.configured ? (
-            <div className="mt-3 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Status</span>
-                <span className={status.vikunja.connected ? "text-[var(--success-text)]" : "text-[var(--error-text)]"}>
-                  {status.vikunja.connected ? "Connected" : "Connection failed"}
-                </span>
+            <div className="mt-3 space-y-3 text-sm">
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Status</span>
+                  <span className={status.vikunja.connected ? "text-[var(--success-text)]" : "text-[var(--error-text)]"}>
+                    {status.vikunja.connected ? "Connected" : "Connection failed"}
+                  </span>
+                </div>
+                {status.vikunja.version && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Version</span>
+                    <span className="text-[var(--text-primary)]">{status.vikunja.version}</span>
+                  </div>
+                )}
+                {status.vikunja.error && !status.vikunja.connected && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Error</span>
+                    <span className="text-[var(--error-text)]">{status.vikunja.error}</span>
+                  </div>
+                )}
               </div>
-              {status.vikunja.version && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Version</span>
-                  <span className="text-[var(--text-primary)]">{status.vikunja.version}</span>
-                </div>
-              )}
-              {status.vikunja.error && !status.vikunja.connected && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Error</span>
-                  <span className="text-[var(--error-text)]">{status.vikunja.error}</span>
-                </div>
+              {status.vikunja.connected && (
+                <>
+                  <div className="border-t border-[var(--border-light)] pt-3">
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Event Checklists project ID
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={vikunjaEventChecklistsId}
+                      onChange={(e) => setVikunjaEventChecklistsId(e.target.value)}
+                      placeholder="Using default"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                    />
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For show/vet/farrier checklists
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Weather Alerts project ID
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={vikunjaWeatherAlertsId}
+                      onChange={(e) => setVikunjaWeatherAlertsId(e.target.value)}
+                      placeholder="Using default"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                    />
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For blanket reminders, footing alerts
+                    </p>
+                  </div>
+                  <div>
+                    <button
+                      onClick={saveVikunjaProjects}
+                      disabled={vikunjaSaving}
+                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                      {vikunjaSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  {vikunjaMessage && (
+                    <p className="text-xs text-[var(--text-muted)]">{vikunjaMessage}</p>
+                  )}
+                </>
               )}
             </div>
           ) : (

@@ -14,6 +14,7 @@ export interface ScoredDay {
   reasons: string[];
   notes: string[];
   forecast: DayForecast;
+  blanket_low_f: number | null;
 }
 
 export interface WeatherAlert {
@@ -311,6 +312,159 @@ function checkDaytimeRain(
   return { skipDailyRain: true, reasons, notes, score };
 }
 
+/** Summarize contiguous high-wind blocks from hourly data for a single day */
+function summarizeWindWindow(
+  dayHourly: HourlyForecast[],
+  sunriseHour: number,
+  sunsetHour: number,
+  cutoffMph: number,
+  tzOffset = 0
+): string | null {
+  if (dayHourly.length === 0) return null;
+
+  // Find hours with significant wind (gust or sustained >= cutoff - 10)
+  const threshold = cutoffMph - 10;
+  const windyHours = dayHourly
+    .filter((h) => h.wind_gust_mph >= threshold || h.wind_speed_mph >= threshold)
+    .map((h) => getLocalHour(h.hour, tzOffset))
+    .sort((a, b) => a - b);
+
+  if (windyHours.length === 0) return null;
+
+  // Group into contiguous blocks
+  const blocks: { start: number; end: number }[] = [];
+  let blockStart = windyHours[0];
+  let blockEnd = windyHours[0];
+
+  for (let i = 1; i < windyHours.length; i++) {
+    if (windyHours[i] <= blockEnd + 1) {
+      blockEnd = windyHours[i];
+    } else {
+      blocks.push({ start: blockStart, end: blockEnd + 1 });
+      blockStart = windyHours[i];
+      blockEnd = windyHours[i];
+    }
+  }
+  blocks.push({ start: blockStart, end: blockEnd + 1 });
+
+  // Check if all wind is outside daytime
+  const allOvernight = blocks.every(
+    (b) => b.end <= sunriseHour || b.start >= sunsetHour
+  );
+  if (allOvernight) {
+    const times = blocks.map((b) => `${formatHour12h(b.start)}-${formatHour12h(b.end)}`);
+    return `Wind overnight ${times.join(", ")}`;
+  }
+
+  // Check if wind covers most of the day
+  const totalWindyHours = windyHours.length;
+  const totalDayHours = dayHourly.length;
+  if (totalWindyHours >= totalDayHours * 0.8) {
+    return "Gusty all day";
+  }
+
+  // Summarize blocks
+  if (blocks.length <= 2) {
+    const times = blocks
+      .map((b) => `${formatHour12h(b.start)}-${formatHour12h(b.end)}`)
+      .join(", ");
+    return `Gusty ${times}`;
+  }
+
+  return "Gusty throughout the day";
+}
+
+function checkDaytimeWind(
+  dayDate: string,
+  forecast: DayForecast,
+  hourly: HourlyForecast[],
+  rideSlots: RideSlot[],
+  settings: WeatherSettings,
+  tzOffset = 0
+): { skipDailyWind: boolean; reasons: string[]; notes: string[]; score: RideScore } {
+  // Filter hourly data to this day
+  const dayHourly = hourly.filter((h) => h.hour.startsWith(dayDate));
+  if (dayHourly.length === 0) {
+    return { skipDailyWind: false, reasons: [], notes: [], score: "green" };
+  }
+
+  // Filter to daytime hours (sunrise to sunset)
+  const sunriseHour = forecast.sunrise ? getLocalHour(forecast.sunrise, tzOffset) : 6;
+  const sunsetHour = forecast.sunset ? getLocalHour(forecast.sunset, tzOffset) : 20;
+  const daytimeHourly = dayHourly.filter((h) => {
+    const hour = getLocalHour(h.hour, tzOffset);
+    return hour >= sunriseHour && hour < sunsetHour;
+  });
+
+  // Get wind timing summary for the full day
+  const windSummary = summarizeWindWindow(dayHourly, sunriseHour, sunsetHour, settings.wind_cutoff_mph, tzOffset);
+
+  if (daytimeHourly.length === 0) {
+    const notes: string[] = [];
+    // No daytime data but might have overnight wind
+    if (windSummary && windSummary.startsWith("Wind overnight")) {
+      notes.push(`${windSummary} \u2014 daytime calm`);
+    }
+    return { skipDailyWind: true, reasons: [], notes, score: "green" };
+  }
+
+  const reasons: string[] = [];
+  const notes: string[] = [];
+  let score: RideScore = "green";
+
+  // Daytime max gust and max sustained wind
+  const maxGust = Math.max(...daytimeHourly.map((h) => h.wind_gust_mph));
+  const maxSustained = Math.max(...daytimeHourly.map((h) => h.wind_speed_mph));
+
+  if (maxGust >= settings.wind_cutoff_mph) {
+    score = escalate(score, "red");
+    const timing = windSummary || "Gusty during daytime";
+    reasons.push(`${timing}: ${maxGust} mph gusts`);
+  } else if (maxGust >= settings.wind_cutoff_mph - 10 || maxSustained >= settings.wind_cutoff_mph - 10) {
+    score = escalate(score, "yellow");
+    const timing = windSummary || "Breezy during daytime";
+    reasons.push(`${timing}: ${maxGust > maxSustained ? maxGust + " mph gusts" : maxSustained + " mph sustained"}`);
+  }
+
+  // Check for overnight-only wind (no daytime wind but wind exists)
+  if (maxGust < settings.wind_cutoff_mph - 10 && maxSustained < settings.wind_cutoff_mph - 10 && windSummary && windSummary.startsWith("Wind overnight")) {
+    notes.push(`${windSummary} \u2014 daytime calm`);
+  }
+
+  // Slot-specific wind reasons (if ride slots exist for this day)
+  const dayOfWeek = new Date(dayDate + "T12:00:00").getDay();
+  const slotsForDay = rideSlots.filter((s) => s.day_of_week === dayOfWeek);
+
+  for (const slot of slotsForDay) {
+    const startHour = parseInt(slot.start_time.split(":")[0], 10);
+    const endHour = parseInt(slot.end_time.split(":")[0], 10);
+    const slotLabel = `${formatTime12h(slot.start_time)}-${formatTime12h(slot.end_time)}`;
+
+    const slotHourly = daytimeHourly.filter((h) => {
+      const hour = getLocalHour(h.hour, tzOffset);
+      return hour >= startHour && hour < endHour;
+    });
+
+    if (slotHourly.length === 0) continue;
+
+    const slotMaxGust = Math.max(...slotHourly.map((h) => h.wind_gust_mph));
+    const slotMaxSustained = Math.max(...slotHourly.map((h) => h.wind_speed_mph));
+
+    if (slotMaxGust >= settings.wind_cutoff_mph) {
+      score = escalate(score, "red");
+      reasons.push(`${slotMaxGust} mph gusts during your ${slotLabel} slot`);
+    } else if (slotMaxGust >= settings.wind_cutoff_mph - 10 || slotMaxSustained >= settings.wind_cutoff_mph - 10) {
+      score = escalate(score, "yellow");
+      const windDesc = slotMaxGust > slotMaxSustained
+        ? `${slotMaxGust} mph gusts`
+        : `${slotMaxSustained} mph wind`;
+      reasons.push(`${windDesc} during ${slotLabel}`);
+    }
+  }
+
+  return { skipDailyWind: true, reasons, notes, score };
+}
+
 /** Find the overnight low from 8pm today to 9am tomorrow using hourly data */
 function getOvernightLow(
   dayDate: string,
@@ -348,16 +502,22 @@ export function scoreDays(
   }
 
   return forecasts.map((f, i) => {
-    // For days 0-1 with hourly data, filter rain to daytime (sunrise-sunset)
+    // For days 0-1 with hourly data, filter rain/wind to daytime (sunrise-sunset)
     let scored: ScoredDay;
     if (i <= 1 && hourly && hourly.length > 0) {
-      const hourlyResult = checkDaytimeRain(f.date, f, hourly, rideSlots ?? [], settings, tzOffset);
-      scored = scoreDay(f, settings, hourlyResult.skipDailyRain);
-      if (hourlyResult.reasons.length > 0) {
-        scored.score = escalate(scored.score, hourlyResult.score);
-        scored.reasons.unshift(...hourlyResult.reasons);
+      const rainResult = checkDaytimeRain(f.date, f, hourly, rideSlots ?? [], settings, tzOffset);
+      const windResult = checkDaytimeWind(f.date, f, hourly, rideSlots ?? [], settings, tzOffset);
+      scored = scoreDay(f, settings, rainResult.skipDailyRain, false, windResult.skipDailyWind);
+      if (rainResult.reasons.length > 0) {
+        scored.score = escalate(scored.score, rainResult.score);
+        scored.reasons.unshift(...rainResult.reasons);
       }
-      scored.notes.push(...hourlyResult.notes);
+      scored.notes.push(...rainResult.notes);
+      if (windResult.reasons.length > 0) {
+        scored.score = escalate(scored.score, windResult.score);
+        scored.reasons.unshift(...windResult.reasons);
+      }
+      scored.notes.push(...windResult.notes);
     } else {
       // Days 2+: no hourly data, use daily aggregates
       scored = scoreDay(f, settings, false, true);
@@ -398,10 +558,12 @@ export function scoreDays(
     if (overnightLow !== null) {
       if (overnightLow <= settings.cold_alert_temp_f) {
         scored.notes.push(`Tonight's low ${overnightLow}\u00B0F (8pm\u20139am) \u2014 blanket needed`);
+        scored.blanket_low_f = overnightLow;
       }
     } else if (f.low_f <= settings.cold_alert_temp_f) {
       // Fallback to daily low when no hourly data
       scored.notes.push(`Overnight low ${f.low_f}\u00B0F \u2014 blanket needed`);
+      scored.blanket_low_f = f.low_f;
     }
 
     // Replace default message if footing added a reason
@@ -418,7 +580,8 @@ export function scoreDay(
   forecast: DayForecast,
   settings: WeatherSettings,
   skipRainCheck = false,
-  noHourlyData = false
+  noHourlyData = false,
+  skipWindCheck = false
 ): ScoredDay {
   const reasons: string[] = [];
   const notes: string[] = [];
@@ -458,13 +621,15 @@ export function scoreDay(
     reasons.push(`Warm: ${forecast.day_f}\u00B0F daytime`);
   }
 
-  // Wind check
-  if (forecast.wind_speed_mph >= settings.wind_cutoff_mph) {
-    score = escalate(score, "red");
-    reasons.push(`Wind: ${forecast.wind_speed_mph} mph`);
-  } else if (forecast.wind_speed_mph >= settings.wind_cutoff_mph - 10) {
-    score = escalate(score, "yellow");
-    reasons.push(`Breezy: ${forecast.wind_speed_mph} mph`);
+  // Wind check (skipped when hourly time-aware check handled it)
+  if (!skipWindCheck) {
+    if (forecast.wind_speed_mph >= settings.wind_cutoff_mph) {
+      score = escalate(score, "red");
+      reasons.push(`Wind: ${forecast.wind_speed_mph} mph`);
+    } else if (forecast.wind_speed_mph >= settings.wind_cutoff_mph - 10) {
+      score = escalate(score, "yellow");
+      reasons.push(`Breezy: ${forecast.wind_speed_mph} mph`);
+    }
   }
 
   // Indoor arena override: red\u2192yellow if indoor available
@@ -482,7 +647,7 @@ export function scoreDay(
     reasons.push("Good riding conditions");
   }
 
-  return { date: forecast.date, score, reasons, notes, forecast };
+  return { date: forecast.date, score, reasons, notes, forecast, blanket_low_f: null };
 }
 
 export function getAlerts(

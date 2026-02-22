@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import * as vikunja from "@/lib/vikunja";
 import { getEvent } from "@/lib/queries/events";
 import { getChecklist } from "@/lib/queries/event-checklists";
+import { getProjectId } from "@/lib/queries/vikunja-projects";
 import pool from "@/lib/db";
 
 export async function POST(request: NextRequest) {
@@ -21,14 +22,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { event_id, project_id } = body;
+    const { event_id, project_id: bodyProjectId } = body;
 
-    if (!event_id || !project_id) {
+    if (!event_id) {
       return NextResponse.json(
-        { error: "event_id and project_id are required" },
+        { error: "event_id is required" },
         { status: 400 }
       );
     }
+
+    // Use body project_id as override, otherwise look up from mapping
+    const project_id = bodyProjectId || await getProjectId("event_checklists");
 
     const event = await getEvent(event_id);
     if (!event) {

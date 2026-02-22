@@ -37,6 +37,8 @@ export interface HourlyForecast {
   pop: number; // 0-1 probability of precipitation
   rain_inches: number;
   temp_f: number;
+  wind_speed_mph: number;
+  wind_gust_mph: number;
 }
 
 export interface WeatherForecast {
@@ -138,6 +140,8 @@ function transformResponse(raw: any): WeatherForecast {
         pop: h.pop ?? 0,
         rain_inches: mmToInches(rainMm + snowMm),
         temp_f: Math.round(h.temp ?? 0),
+        wind_speed_mph: Math.round(h.wind_speed ?? 0),
+        wind_gust_mph: Math.round(h.wind_gust ?? 0),
       };
     }),
     daily: fd.map((d: any) => {
