@@ -12,7 +12,6 @@ import {
   getSyncState,
   upsertSyncState,
   replaceSuggestedWindows,
-  getSuggestedWindows,
 } from "@/lib/queries/icloud-sync";
 
 export async function POST(request: NextRequest) {
@@ -259,52 +258,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Write ride windows to iCloud write calendar if configured
-      if (icloudSettings.write_calendar_id && windows.length > 0) {
-        // Get existing windows to clean up stale ones
-        const existingWindows = await getSuggestedWindows(
-          from.toISOString().split("T")[0],
-          to.toISOString().split("T")[0]
-        );
-
-        // Delete stale events from iCloud
-        for (const existing of existingWindows) {
-          if (existing.ical_uid) {
-            try {
-              await caldav.deleteEvent(
-                icloudSettings.write_calendar_id,
-                existing.ical_uid
-              );
-            } catch {
-              // Event may already be gone
-            }
-          }
-        }
-
-        // Write new events to iCloud
-        for (const w of windows) {
-          try {
-            const startDt = new Date(`${w.date}T${w.start_time}`);
-            const endDt = new Date(`${w.date}T${w.end_time}`);
-            const scoreEmoji = w.weather_score === "green" ? "\u2705" : "\u26A0\uFE0F";
-
-            const uid = await caldav.writeEvent(
-              icloudSettings.write_calendar_id,
-              {
-                title: `${scoreEmoji} Ride Window`,
-                start: startDt,
-                end: endDt,
-                description: w.weather_notes.join("; "),
-              }
-            );
-            w.ical_uid = uid;
-          } catch (err) {
-            console.error("Failed to write ride window to iCloud:", err);
-          }
-        }
-      }
-
-      // Save windows to DB
+      // Save windows to DB (iCloud write happens on approval in digest)
       await replaceSuggestedWindows(windows);
       windowsSuggested = windows.length;
     }
