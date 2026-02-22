@@ -47,8 +47,6 @@ export default function IntegrationsSection() {
   const [icloudSaving, setIcloudSaving] = useState(false);
   const [icloudSyncing, setIcloudSyncing] = useState(false);
   const [icloudMessage, setIcloudMessage] = useState("");
-  const [newListName, setNewListName] = useState("");
-  const [creatingList, setCreatingList] = useState(false);
 
   const fetchCalendars = useCallback(async () => {
     setCalendarsLoading(true);
@@ -135,28 +133,6 @@ export default function IntegrationsSection() {
       setIcloudMessage(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setIcloudSyncing(false);
-    }
-  }
-
-  async function createRemindersList() {
-    if (!newListName.trim()) return;
-    setCreatingList(true);
-    setIcloudMessage("");
-    try {
-      const res = await fetch("/api/sync/icloud/reminders-lists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newListName.trim() }),
-      });
-      if (!res.ok) throw new Error("Failed to create list");
-      const list = await res.json();
-      setCalendars((prev) => [...prev, list]);
-      setNewListName("");
-      setIcloudMessage(`Created "${list.name}" list`);
-    } catch {
-      setIcloudMessage("Failed to create Reminders list");
-    } finally {
-      setCreatingList(false);
     }
   }
 
@@ -259,25 +235,8 @@ export default function IntegrationsSection() {
                       Apple Reminders lists
                     </label>
                     <p className="mb-2 text-xs text-[var(--text-muted)]">
-                      Map each reminder type to a Reminders list. Apple only exposes CalDAV-created lists — use the button below to create new ones.
+                      Only CalDAV-compatible lists appear here. All three can use the same list — reminders are distinguished by title.
                     </p>
-                    <div className="mb-2 flex gap-2">
-                      <input
-                        type="text"
-                        value={newListName}
-                        onChange={(e) => setNewListName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && createRemindersList()}
-                        placeholder="New list name..."
-                        className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
-                      />
-                      <button
-                        onClick={createRemindersList}
-                        disabled={creatingList || !newListName.trim()}
-                        className="shrink-0 rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                      >
-                        {creatingList ? "Creating..." : "Create List"}
-                      </button>
-                    </div>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">

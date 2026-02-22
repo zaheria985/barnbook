@@ -1,7 +1,7 @@
 // iCloud CalDAV integration using tsdav
 // Requires ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD
 
-import { createDAVClient, DAVClient, DAVCalendar, DAVObject } from "tsdav";
+import { createDAVClient, DAVCalendar, DAVObject } from "tsdav";
 
 export interface CalendarInfo {
   id: string;
@@ -146,123 +146,25 @@ function parseVTodos(ical: string): CalendarReminder[] {
 }
 
 export async function listCalendars(): Promise<CalendarInfo[]> {
-  if (!isConfigured()) {
-    throw new Error("iCloud not configured. Set ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD.");
-  }
+  const client = await createClient();
+  const calendars = await client.fetchCalendars();
 
-  // Use DAVClient class to access account.homeUrl for raw PROPFIND
-  const client = new DAVClient({
-    serverUrl: "https://caldav.icloud.com",
-    credentials: {
-      username: process.env.ICLOUD_APPLE_ID!,
-      password: process.env.ICLOUD_APP_PASSWORD!,
-    },
-    authMethod: "Basic",
-    defaultAccountType: "caldav",
-  });
-  await client.login();
-
-  const homeUrl = client.account?.homeUrl;
-  const rootUrl = client.account?.rootUrl ?? "";
-  if (!homeUrl) throw new Error("CalDAV account discovery failed — no homeUrl");
-
-  // Raw PROPFIND on calendar home — bypasses tsdav's supportedCalendarComponentSet filter
-  // which drops collections (like custom iCloud Reminders lists) that lack that property
-  const res = await client.propfind({
-    url: homeUrl,
-    props: {
-      "d:displayname": {},
-      "ca:calendar-color": {},
-      "d:resourcetype": {},
-      "c:supported-calendar-component-set": {},
-    },
-    depth: "1",
-  });
-
-  console.log("Raw PROPFIND collections:", res.map((r: Record<string, unknown>) => ({
-    href: r.href,
-    displayName: (r.props as Record<string, unknown>)?.displayname,
-    resourcetype: (r.props as Record<string, unknown>)?.resourcetype
-      ? Object.keys((r.props as Record<string, Record<string, unknown>>).resourcetype)
-      : [],
-    componentSet: (r.props as Record<string, unknown>)?.supportedCalendarComponentSet,
-  })));
-
-  const results: CalendarInfo[] = [];
-
-  for (const r of res) {
-    const props = r.props as Record<string, unknown> | undefined;
-    if (!props?.resourcetype) continue;
-
-    const resourceTypes = Object.keys(props.resourcetype as Record<string, unknown>);
-    if (!resourceTypes.includes("calendar")) continue;
-
-    // Parse supported-calendar-component-set
-    const compSet = props.supportedCalendarComponentSet as
-      | { comp: { _attributes: { name: string } }[] | { _attributes: { name: string } } }
-      | undefined;
-    let components: string[] = [];
-    if (compSet?.comp) {
-      components = Array.isArray(compSet.comp)
-        ? compSet.comp.map((c) => c._attributes.name)
-        : [compSet.comp._attributes.name];
-    }
-
-    // Detect type: VTODO = reminders, VEVENT = calendar, unknown = reminders
+  return calendars.map((cal: DAVCalendar) => {
+    const components = cal.components ?? [];
     const hasVTODO = components.includes("VTODO");
     const hasVEVENT = components.includes("VEVENT");
+    // VTODO → reminders, VEVENT → calendar, unknown → reminders
     const type: "calendar" | "reminders" = hasVTODO ? "reminders"
       : hasVEVENT ? "calendar"
       : "reminders";
 
-    const displayName = props.displayname as string | { _cdata: string } | undefined;
-    const name = typeof displayName === "string" ? displayName
-      : (displayName as { _cdata?: string })?._cdata ?? "Untitled";
-
-    results.push({
-      id: new URL(r.href as string ?? "", rootUrl ?? "").href,
-      name,
-      color: (props.calendarColor as string) ?? null,
+    return {
+      id: cal.url,
+      name: typeof cal.displayName === "string" ? cal.displayName : "Untitled",
+      color: (cal as unknown as Record<string, string>).calendarColor ?? null,
       type,
-    });
-  }
-
-  return results;
-}
-
-export async function createRemindersList(name: string): Promise<CalendarInfo> {
-  if (!isConfigured()) {
-    throw new Error("iCloud not configured. Set ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD.");
-  }
-
-  const client = new DAVClient({
-    serverUrl: "https://caldav.icloud.com",
-    credentials: {
-      username: process.env.ICLOUD_APPLE_ID!,
-      password: process.env.ICLOUD_APP_PASSWORD!,
-    },
-    authMethod: "Basic",
-    defaultAccountType: "caldav",
+    };
   });
-  await client.login();
-
-  const homeUrl = client.account?.homeUrl;
-  if (!homeUrl) throw new Error("CalDAV account discovery failed");
-
-  const listId = `barnbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const url = `${homeUrl}${listId}/`;
-
-  await client.makeCalendar({
-    url,
-    props: {
-      "d:displayname": name,
-      "c:supported-calendar-component-set": {
-        "c:comp": { _attributes: { name: "VTODO" } },
-      },
-    },
-  });
-
-  return { id: url, name, color: null, type: "reminders" };
 }
 
 export async function fetchEvents(
