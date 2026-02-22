@@ -230,6 +230,41 @@ export async function listCalendars(): Promise<CalendarInfo[]> {
   return results;
 }
 
+export async function createRemindersList(name: string): Promise<CalendarInfo> {
+  if (!isConfigured()) {
+    throw new Error("iCloud not configured. Set ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD.");
+  }
+
+  const client = new DAVClient({
+    serverUrl: "https://caldav.icloud.com",
+    credentials: {
+      username: process.env.ICLOUD_APPLE_ID!,
+      password: process.env.ICLOUD_APP_PASSWORD!,
+    },
+    authMethod: "Basic",
+    defaultAccountType: "caldav",
+  });
+  await client.login();
+
+  const homeUrl = client.account?.homeUrl;
+  if (!homeUrl) throw new Error("CalDAV account discovery failed");
+
+  const listId = `barnbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const url = `${homeUrl}${listId}/`;
+
+  await client.makeCalendar({
+    url,
+    props: {
+      "d:displayname": name,
+      "c:supported-calendar-component-set": {
+        "c:comp": { _attributes: { name: "VTODO" } },
+      },
+    },
+  });
+
+  return { id: url, name, color: null, type: "reminders" };
+}
+
 export async function fetchEvents(
   calendarIds: string[],
   from: Date,
