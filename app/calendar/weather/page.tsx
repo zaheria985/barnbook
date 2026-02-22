@@ -297,7 +297,7 @@ export default function WeatherDashboardPage() {
                 >
                   <div>
                     <span className="font-medium text-sm">
-                      {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
+                      {new Date(day.date + "T12:00:00").toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
@@ -344,7 +344,7 @@ export default function WeatherDashboardPage() {
               >
                 <div>
                   <span className="font-medium text-sm text-[var(--success-text)]">
-                    {new Date(String(event.start_date).split("T")[0] + "T00:00:00").toLocaleDateString("en-US", {
+                    {new Date(String(event.start_date).split("T")[0] + "T12:00:00").toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",
                       day: "numeric",
@@ -380,7 +380,7 @@ export default function WeatherDashboardPage() {
                 className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-[var(--surface-subtle)]"
               >
                 <span className="w-20 text-sm font-medium text-[var(--text-primary)]">
-                  {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
+                  {new Date(day.date + "T12:00:00").toLocaleDateString("en-US", {
                     weekday: "short",
                   })}
                 </span>

@@ -77,7 +77,7 @@ function scoreBorderColor(score: string): string {
 function toDateKey(dateStr: string): string {
   // Already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-  // ISO with T: "2026-02-22T00:00:00.000Z" or "2026-02-22T14:30:00Z"
+  // ISO with T: "2026-02-22T12:00:00.000Z" or "2026-02-22T14:30:00Z"
   if (dateStr.includes("T")) return dateStr.split("T")[0];
   return dateStr;
 }
@@ -118,7 +118,7 @@ function displayTimeFromIcal(dtstart: string): string {
 }
 
 function formatDayHeader(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr + "T12:00:00");
   return d.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -127,7 +127,7 @@ function formatDayHeader(dateStr: string): string {
 }
 
 function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr + "T12:00:00");
   return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",

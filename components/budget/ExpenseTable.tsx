@@ -12,7 +12,7 @@ function formatCurrency(n: number) {
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr.split("T")[0] + "T00:00:00");
+  const d = new Date(dateStr.split("T")[0] + "T12:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 

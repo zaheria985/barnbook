@@ -76,7 +76,7 @@ export default function ChecklistView({
                         : "text-[var(--text-muted)]"
                     }`}
                   >
-                    Due: {new Date(String(item.due_date).split("T")[0] + "T00:00:00").toLocaleDateString()}
+                    Due: {new Date(String(item.due_date).split("T")[0] + "T12:00:00").toLocaleDateString()}
                     {isOverdue && " (overdue)"}
                   </p>
                 )}

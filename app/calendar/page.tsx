@@ -159,7 +159,7 @@ export default function CalendarPage() {
                   className={`flex-1 px-2 py-2 text-center border-r last:border-r-0 border-[var(--border-light)] ${scoreBg}`}
                 >
                   <p className="text-[10px] font-medium text-[var(--text-muted)]">
-                    {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
+                    {new Date(day.date + "T12:00:00").toLocaleDateString("en-US", {
                       weekday: "short",
                     })}
                   </p>
@@ -247,7 +247,7 @@ export default function CalendarPage() {
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-medium text-[var(--text-secondary)]">
-              {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", {
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "long",
                 day: "numeric",
