@@ -23,6 +23,7 @@ export interface SuggestedWindow {
   end_time: string;
   weather_score: string;
   weather_notes: string[];
+  avg_temp_f: number | null;
   ical_uid: string | null;
   created_at: string;
 }
@@ -95,7 +96,7 @@ export async function getSuggestedWindows(
   to: string
 ): Promise<SuggestedWindow[]> {
   const res = await pool.query(
-    `SELECT id, date, start_time, end_time, weather_score, weather_notes, ical_uid, created_at
+    `SELECT id, date, start_time, end_time, weather_score, weather_notes, avg_temp_f, ical_uid, created_at
      FROM suggested_ride_windows
      WHERE date >= $1 AND date <= $2
      ORDER BY date, start_time`,
@@ -111,6 +112,7 @@ export async function replaceSuggestedWindows(
     end_time: string;
     weather_score: string;
     weather_notes: string[];
+    avg_temp_f: number | null;
     ical_uid: string | null;
   }[]
 ): Promise<SuggestedWindow[]> {
@@ -122,10 +124,10 @@ export async function replaceSuggestedWindows(
     const inserted: SuggestedWindow[] = [];
     for (const w of windows) {
       const res = await client.query(
-        `INSERT INTO suggested_ride_windows (date, start_time, end_time, weather_score, weather_notes, ical_uid)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, date, start_time, end_time, weather_score, weather_notes, ical_uid, created_at`,
-        [w.date, w.start_time, w.end_time, w.weather_score, w.weather_notes, w.ical_uid]
+        `INSERT INTO suggested_ride_windows (date, start_time, end_time, weather_score, weather_notes, avg_temp_f, ical_uid)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, date, start_time, end_time, weather_score, weather_notes, avg_temp_f, ical_uid, created_at`,
+        [w.date, w.start_time, w.end_time, w.weather_score, w.weather_notes, w.avg_temp_f, w.ical_uid]
       );
       inserted.push(res.rows[0]);
     }
@@ -144,7 +146,7 @@ export async function getSuggestedWindow(
   id: string
 ): Promise<SuggestedWindow | null> {
   const res = await pool.query(
-    `SELECT id, date, start_time, end_time, weather_score, weather_notes, ical_uid, created_at
+    `SELECT id, date, start_time, end_time, weather_score, weather_notes, avg_temp_f, ical_uid, created_at
      FROM suggested_ride_windows
      WHERE id = $1`,
     [id]

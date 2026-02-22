@@ -617,6 +617,11 @@ function RideWindowRow({
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {formatTime12h(w.start_time)} &ndash; {formatTime12h(w.end_time)}
           </span>
+          {w.avg_temp_f != null && (
+            <span className="text-xs text-[var(--text-muted)]">
+              &middot; {w.avg_temp_f}&deg;F
+            </span>
+          )}
         </div>
         {w.weather_notes.length > 0 && (
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">

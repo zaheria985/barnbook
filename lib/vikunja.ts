@@ -88,6 +88,19 @@ export async function deleteTask(taskId: number): Promise<void> {
   }
 }
 
+export interface VikunjaProject {
+  id: number;
+  title: string;
+}
+
+export async function getProjects(): Promise<VikunjaProject[]> {
+  const res = await fetch(`${getBaseUrl()}/api/v1/projects`, {
+    headers: getHeaders(),
+  });
+  if (!res.ok) throw new Error(`Vikunja list projects failed: ${res.status}`);
+  return res.json();
+}
+
 export async function checkHealth(): Promise<{
   ok: boolean;
   version?: string;

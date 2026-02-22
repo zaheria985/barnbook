@@ -48,8 +48,10 @@ export default function IntegrationsSection() {
   const [icloudMessage, setIcloudMessage] = useState("");
 
   // Vikunja project mapping state
+  const [vikunjaProjects, setVikunjaProjects] = useState<{ id: number; title: string }[]>([]);
   const [vikunjaEventChecklistsId, setVikunjaEventChecklistsId] = useState("");
   const [vikunjaWeatherAlertsId, setVikunjaWeatherAlertsId] = useState("");
+  const [vikunjaTreatmentsId, setVikunjaTreatmentsId] = useState("");
   const [vikunjaSaving, setVikunjaSaving] = useState(false);
   const [vikunjaMessage, setVikunjaMessage] = useState("");
 
@@ -93,7 +95,7 @@ export default function IntegrationsSection() {
 
         // If Vikunja is connected, fetch project mappings
         if (data.vikunja?.connected) {
-          fetchVikunjaProjects();
+          fetchVikunjaProjectMappings();
         }
       } catch {
         setError("Failed to load integration status");
@@ -142,18 +144,27 @@ export default function IntegrationsSection() {
     }
   }
 
-  async function fetchVikunjaProjects() {
+  async function fetchVikunjaProjectMappings() {
     try {
-      const res = await fetch("/api/settings/vikunja-projects");
-      if (res.ok) {
-        const data = await res.json();
+      const [mappingsRes, listRes] = await Promise.all([
+        fetch("/api/settings/vikunja-projects"),
+        fetch("/api/settings/vikunja-projects/list"),
+      ]);
+      if (mappingsRes.ok) {
+        const data = await mappingsRes.json();
         for (const mapping of data.mappings || []) {
           if (mapping.category === "event_checklists") {
             setVikunjaEventChecklistsId(String(mapping.project_id));
           } else if (mapping.category === "weather_alerts") {
             setVikunjaWeatherAlertsId(String(mapping.project_id));
+          } else if (mapping.category === "treatments") {
+            setVikunjaTreatmentsId(String(mapping.project_id));
           }
         }
+      }
+      if (listRes.ok) {
+        const data = await listRes.json();
+        setVikunjaProjects(data.projects || []);
       }
     } catch {
       // Failed to fetch — fields will show placeholder
@@ -166,25 +177,16 @@ export default function IntegrationsSection() {
     try {
       const mappings = [];
       if (vikunjaEventChecklistsId.trim()) {
-        const id = Number(vikunjaEventChecklistsId.trim());
-        if (isNaN(id) || id <= 0) {
-          setVikunjaMessage("Event Checklists must be a positive number");
-          setVikunjaSaving(false);
-          return;
-        }
-        mappings.push({ category: "event_checklists", project_id: id });
+        mappings.push({ category: "event_checklists", project_id: Number(vikunjaEventChecklistsId) });
       }
       if (vikunjaWeatherAlertsId.trim()) {
-        const id = Number(vikunjaWeatherAlertsId.trim());
-        if (isNaN(id) || id <= 0) {
-          setVikunjaMessage("Weather Alerts must be a positive number");
-          setVikunjaSaving(false);
-          return;
-        }
-        mappings.push({ category: "weather_alerts", project_id: id });
+        mappings.push({ category: "weather_alerts", project_id: Number(vikunjaWeatherAlertsId) });
+      }
+      if (vikunjaTreatmentsId.trim()) {
+        mappings.push({ category: "treatments", project_id: Number(vikunjaTreatmentsId) });
       }
       if (mappings.length === 0) {
-        setVikunjaMessage("No project IDs to save");
+        setVikunjaMessage("No projects selected");
         setVikunjaSaving(false);
         return;
       }
@@ -374,34 +376,56 @@ export default function IntegrationsSection() {
                 <>
                   <div className="border-t border-[var(--border-light)] pt-3">
                     <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Event Checklists project ID
+                      Event Checklists project
                     </label>
-                    <input
-                      type="number"
-                      min="1"
+                    <select
                       value={vikunjaEventChecklistsId}
                       onChange={(e) => setVikunjaEventChecklistsId(e.target.value)}
-                      placeholder="Using default"
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
-                    />
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">Using default</option>
+                      {vikunjaProjects.map((p) => (
+                        <option key={p.id} value={String(p.id)}>{p.title}</option>
+                      ))}
+                    </select>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       For show/vet/farrier checklists
                     </p>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Weather Alerts project ID
+                      Weather Alerts project
                     </label>
-                    <input
-                      type="number"
-                      min="1"
+                    <select
                       value={vikunjaWeatherAlertsId}
                       onChange={(e) => setVikunjaWeatherAlertsId(e.target.value)}
-                      placeholder="Using default"
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
-                    />
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">Using default</option>
+                      {vikunjaProjects.map((p) => (
+                        <option key={p.id} value={String(p.id)}>{p.title}</option>
+                      ))}
+                    </select>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       For blanket reminders, footing alerts
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Treatment Reminders project
+                    </label>
+                    <select
+                      value={vikunjaTreatmentsId}
+                      onChange={(e) => setVikunjaTreatmentsId(e.target.value)}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">Using default</option>
+                      {vikunjaProjects.map((p) => (
+                        <option key={p.id} value={String(p.id)}>{p.title}</option>
+                      ))}
+                    </select>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For recurring treatment schedules
                     </p>
                   </div>
                   <div>

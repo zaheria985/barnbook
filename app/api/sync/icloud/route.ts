@@ -152,6 +152,76 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // --- Treatment reminders ---
+      if (vikunja.isConfigured()) {
+        try {
+          const {
+            getSchedules: getTreatmentSchedules,
+            getReminder: getTreatmentReminder,
+            createReminder: createTreatmentReminder,
+            countReminders: countTreatmentReminders,
+            deleteOldReminders: deleteOldTreatmentReminders,
+          } = await import("@/lib/queries/treatment-schedules");
+          const { getProjectId } = await import("@/lib/queries/vikunja-projects");
+
+          await deleteOldTreatmentReminders();
+
+          const schedules = await getTreatmentSchedules();
+          const todayDate = from.toISOString().split("T")[0];
+          const sevenDaysOut = new Date(from);
+          sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
+          const sevenDaysOutDate = sevenDaysOut.toISOString().split("T")[0];
+
+          for (const schedule of schedules) {
+            const startDate = new Date(schedule.start_date + "T00:00:00");
+            const freqMs = schedule.frequency_days * 86400000;
+
+            // Calculate due dates in the next 7 days
+            for (let n = 0; n < 1000; n++) {
+              const dueMs = startDate.getTime() + n * freqMs;
+              const dueDate = new Date(dueMs).toISOString().split("T")[0];
+
+              // Stop if past 7-day window
+              if (dueDate > sevenDaysOutDate) break;
+
+              // Skip dates before today
+              if (dueDate < todayDate) continue;
+
+              // Skip dates past end_date
+              if (schedule.end_date && dueDate > schedule.end_date) break;
+
+              // Check occurrence limit
+              if (schedule.occurrence_count) {
+                const count = await countTreatmentReminders(schedule.id);
+                if (count >= schedule.occurrence_count) break;
+              }
+
+              // Skip if already reminded
+              const existing = await getTreatmentReminder(schedule.id, dueDate);
+              if (existing) continue;
+
+              try {
+                const projectId = await getProjectId("treatments");
+                const title = schedule.horse_name
+                  ? `\uD83D\uDC8A ${schedule.name} \u2014 ${schedule.horse_name}`
+                  : `\uD83D\uDC8A ${schedule.name}`;
+                const task = await vikunja.createTask({
+                  title,
+                  due_date: `${dueDate}T09:00:00`,
+                  project_id: projectId,
+                });
+                await createTreatmentReminder(schedule.id, dueDate, String(task.id));
+              } catch (err) {
+                console.error("Failed to create treatment reminder:", err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Treatment reminder sync failed:", err);
+          // Fire-and-forget — don't block sync
+        }
+      }
+
       // Build busy times from iCloud events
       const busySlots = icalEvents
         .filter((e) => e.dtstart && e.dtend)
@@ -167,6 +237,7 @@ export async function POST(request: NextRequest) {
         end_time: string;
         weather_score: string;
         weather_notes: string[];
+        avg_temp_f: number | null;
         ical_uid: string | null;
       }[] = [];
 
@@ -229,12 +300,30 @@ export async function POST(request: NextRequest) {
 
           if (hasConflict) continue;
 
+          // Calculate average temperature for this window
+          let avgTempF: number | null = null;
+          const slotHourlyTemps = forecast.hourly.filter((h) => {
+            const hDate = h.hour.split("T")[0];
+            if (hDate !== dayDate) return false;
+            const hHour = getLocalHour(h.hour, tzOffset);
+            return hHour >= slotStartHour && hHour < slotEndHour;
+          });
+          if (slotHourlyTemps.length > 0) {
+            avgTempF = Math.round(
+              slotHourlyTemps.reduce((sum, h) => sum + h.temp_f, 0) / slotHourlyTemps.length
+            );
+          } else {
+            // Fall back to daytime temperature for days without hourly data
+            avgTempF = Math.round(day.forecast.day_f);
+          }
+
           windows.push({
             date: dayDate,
             start_time: slot.start_time,
             end_time: slot.end_time,
             weather_score: day.score,
             weather_notes: [...day.reasons, ...day.notes],
+            avg_temp_f: avgTempF,
             ical_uid: null,
           });
         }

@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const validCategories = ["event_checklists", "weather_alerts"];
+    const validCategories = ["event_checklists", "weather_alerts", "treatments"];
     const results = [];
 
     for (const mapping of mappings) {
