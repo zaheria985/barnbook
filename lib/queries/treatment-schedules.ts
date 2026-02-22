@@ -19,7 +19,7 @@ export interface TreatmentReminder {
   id: string;
   schedule_id: string;
   due_date: string;
-  vikunja_task_id: string | null;
+  reminder_uid: string | null;
   created_at: string;
 }
 
@@ -189,7 +189,7 @@ export async function getReminder(
   date: string
 ): Promise<TreatmentReminder | null> {
   const res = await pool.query(
-    `SELECT id, schedule_id, due_date, vikunja_task_id, created_at
+    `SELECT id, schedule_id, due_date, reminder_uid, created_at
      FROM treatment_reminders
      WHERE schedule_id = $1 AND due_date = $2`,
     [scheduleId, date]
@@ -201,13 +201,13 @@ export async function getReminder(
 export async function createReminder(
   scheduleId: string,
   date: string,
-  vikunjaTaskId: string | null
+  reminderUid: string | null
 ): Promise<TreatmentReminder> {
   const res = await pool.query(
-    `INSERT INTO treatment_reminders (schedule_id, due_date, vikunja_task_id)
+    `INSERT INTO treatment_reminders (schedule_id, due_date, reminder_uid)
      VALUES ($1, $2, $3)
-     RETURNING id, schedule_id, due_date, vikunja_task_id, created_at`,
-    [scheduleId, date, vikunjaTaskId]
+     RETURNING id, schedule_id, due_date, reminder_uid, created_at`,
+    [scheduleId, date, reminderUid]
   );
   return serializeReminderDates(res.rows[0]);
 }

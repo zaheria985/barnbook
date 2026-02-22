@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as caldav from "@/lib/caldav";
-import * as vikunja from "@/lib/vikunja";
 import { getSettings } from "@/lib/queries/weather-settings";
 import { getKeywords } from "@/lib/queries/detection-keywords";
 import { createEvent } from "@/lib/queries/events";
@@ -124,9 +123,8 @@ export async function POST(request: NextRequest) {
       );
 
       // --- Blanket reminders ---
-      if (vikunja.isConfigured()) {
+      if (icloudSettings.write_reminders_calendar_id) {
         const { getReminder, createReminder, deleteOldReminders } = await import("@/lib/queries/blanket-reminders");
-        const { getProjectId } = await import("@/lib/queries/vikunja-projects");
 
         // Clean up old reminders
         await deleteOldReminders();
@@ -139,16 +137,13 @@ export async function POST(request: NextRequest) {
           if (existing) continue;
 
           try {
-            const projectId = await getProjectId("weather_alerts");
-            const task = await vikunja.createTask({
+            const uid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
               title: `\uD83D\uDC34 Put blanket on tonight \u2014 low ${day.blanket_low_f}\u00B0F`,
-              due_date: `${day.date}T18:00:00`,
-              project_id: projectId,
+              due: `${day.date}T18:00:00`,
             });
-            await createReminder(day.date, day.blanket_low_f, String(task.id));
+            await createReminder(day.date, day.blanket_low_f, uid);
           } catch (err) {
             console.error("Failed to create blanket reminder:", err);
-            // Fire-and-forget — don't block sync
           }
         }
       }
@@ -286,7 +281,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Treatment reminders ---
-    if (vikunja.isConfigured()) {
+    if (icloudSettings.write_reminders_calendar_id) {
       try {
         const {
           getSchedules: getTreatmentSchedules,
@@ -295,7 +290,6 @@ export async function POST(request: NextRequest) {
           countReminders: countTreatmentReminders,
           deleteOldReminders: deleteOldTreatmentReminders,
         } = await import("@/lib/queries/treatment-schedules");
-        const { getProjectId } = await import("@/lib/queries/vikunja-projects");
 
         await deleteOldTreatmentReminders();
 
@@ -309,41 +303,31 @@ export async function POST(request: NextRequest) {
           const startDate = new Date(schedule.start_date + "T00:00:00");
           const freqMs = schedule.frequency_days * 86400000;
 
-          // Calculate due dates in the next 7 days
           for (let n = 0; n < 1000; n++) {
             const dueMs = startDate.getTime() + n * freqMs;
             const dueDate = new Date(dueMs).toISOString().split("T")[0];
 
-            // Stop if past 7-day window
             if (dueDate > sevenDaysOutDate) break;
-
-            // Skip dates before today
             if (dueDate < todayDate) continue;
-
-            // Skip dates past end_date
             if (schedule.end_date && dueDate > schedule.end_date) break;
 
-            // Check occurrence limit
             if (schedule.occurrence_count) {
               const count = await countTreatmentReminders(schedule.id);
               if (count >= schedule.occurrence_count) break;
             }
 
-            // Skip if already reminded
             const existing = await getTreatmentReminder(schedule.id, dueDate);
             if (existing) continue;
 
             try {
-              const projectId = await getProjectId("treatments");
               const title = schedule.horse_name
                 ? `\uD83D\uDC8A ${schedule.name} \u2014 ${schedule.horse_name}`
                 : `\uD83D\uDC8A ${schedule.name}`;
-              const task = await vikunja.createTask({
+              const uid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
                 title,
-                due_date: `${dueDate}T09:00:00`,
-                project_id: projectId,
+                due: `${dueDate}T09:00:00`,
               });
-              await createTreatmentReminder(schedule.id, dueDate, String(task.id));
+              await createTreatmentReminder(schedule.id, dueDate, uid);
             } catch (err) {
               console.error("Failed to create treatment reminder:", err);
             }
@@ -351,16 +335,14 @@ export async function POST(request: NextRequest) {
         }
       } catch (err) {
         console.error("Treatment reminder sync failed:", err);
-        // Fire-and-forget — don't block sync
       }
     }
 
-    // --- Auto-push confirmed event checklists to Vikunja ---
+    // --- Auto-push confirmed event checklists to iCloud Reminders ---
     let checklistsPushed = 0;
-    if (vikunja.isConfigured()) {
+    if (icloudSettings.write_reminders_calendar_id) {
       try {
         const { getChecklist } = await import("@/lib/queries/event-checklists");
-        const { getProjectId } = await import("@/lib/queries/vikunja-projects");
 
         // Find confirmed events with checklists that haven't been pushed
         const unpushed = await pool.query(
@@ -368,45 +350,32 @@ export async function POST(request: NextRequest) {
            FROM events e
            JOIN event_checklists ec ON ec.event_id = e.id
            WHERE e.is_confirmed = true
-             AND e.vikunja_task_id IS NULL
+             AND e.reminder_uid IS NULL
              AND e.start_date >= CURRENT_DATE`,
         );
 
         for (const event of unpushed.rows) {
           try {
-            const projectId = await getProjectId("event_checklists");
-            const mainTask = await vikunja.createTask({
+            const mainUid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
               title: event.title,
               description: `${event.event_type} | ${event.location || "No location"}`,
-              due_date: event.start_date,
-              project_id: projectId,
+              due: event.start_date,
             });
 
             await pool.query(
-              `INSERT INTO vikunja_task_map (vikunja_task_id, event_id, sync_type)
-               VALUES ($1, $2, 'push')`,
-              [String(mainTask.id), event.id]
-            );
-            await pool.query(
-              `UPDATE events SET vikunja_task_id = $1 WHERE id = $2`,
-              [String(mainTask.id), event.id]
+              `UPDATE events SET reminder_uid = $1 WHERE id = $2`,
+              [mainUid, event.id]
             );
 
             const checklist = await getChecklist(event.id);
             for (const item of checklist) {
-              const subTask = await vikunja.createTask({
+              const itemUid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
                 title: item.title,
-                due_date: item.due_date,
-                project_id: projectId,
+                due: item.due_date,
               });
               await pool.query(
-                `INSERT INTO vikunja_task_map (vikunja_task_id, checklist_id, sync_type)
-                 VALUES ($1, $2, 'push')`,
-                [String(subTask.id), item.id]
-              );
-              await pool.query(
-                `UPDATE event_checklists SET vikunja_task_id = $1 WHERE id = $2`,
-                [String(subTask.id), item.id]
+                `UPDATE event_checklists SET reminder_uid = $1 WHERE id = $2`,
+                [itemUid, item.id]
               );
             }
 

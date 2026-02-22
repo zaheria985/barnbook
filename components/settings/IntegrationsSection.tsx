@@ -3,12 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 
 interface SyncStatus {
-  vikunja: {
-    configured: boolean;
-    connected: boolean;
-    version: string | null;
-    error: string | null;
-  };
   weatherkit: {
     configured: boolean;
   };
@@ -29,6 +23,7 @@ interface IcloudCalendar {
 interface IcloudSettings {
   read_calendar_ids: string[];
   write_calendar_id: string | null;
+  write_reminders_calendar_id: string | null;
 }
 
 export default function IntegrationsSection() {
@@ -41,19 +36,12 @@ export default function IntegrationsSection() {
   const [icloudSettings, setIcloudSettings] = useState<IcloudSettings>({
     read_calendar_ids: [],
     write_calendar_id: null,
+    write_reminders_calendar_id: null,
   });
   const [calendarsLoading, setCalendarsLoading] = useState(false);
   const [icloudSaving, setIcloudSaving] = useState(false);
   const [icloudSyncing, setIcloudSyncing] = useState(false);
   const [icloudMessage, setIcloudMessage] = useState("");
-
-  // Vikunja project mapping state
-  const [vikunjaProjects, setVikunjaProjects] = useState<{ id: number; title: string }[]>([]);
-  const [vikunjaEventChecklistsId, setVikunjaEventChecklistsId] = useState("");
-  const [vikunjaWeatherAlertsId, setVikunjaWeatherAlertsId] = useState("");
-  const [vikunjaTreatmentsId, setVikunjaTreatmentsId] = useState("");
-  const [vikunjaSaving, setVikunjaSaving] = useState(false);
-  const [vikunjaMessage, setVikunjaMessage] = useState("");
 
   const fetchCalendars = useCallback(async () => {
     setCalendarsLoading(true);
@@ -71,6 +59,7 @@ export default function IntegrationsSection() {
         setIcloudSettings({
           read_calendar_ids: data.read_calendar_ids || [],
           write_calendar_id: data.write_calendar_id || null,
+          write_reminders_calendar_id: data.write_reminders_calendar_id || null,
         });
       }
     } catch {
@@ -93,10 +82,6 @@ export default function IntegrationsSection() {
           fetchCalendars();
         }
 
-        // If Vikunja is connected, fetch project mappings
-        if (data.vikunja?.connected) {
-          fetchVikunjaProjectMappings();
-        }
       } catch {
         setError("Failed to load integration status");
       } finally {
@@ -141,66 +126,6 @@ export default function IntegrationsSection() {
       setIcloudMessage(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setIcloudSyncing(false);
-    }
-  }
-
-  async function fetchVikunjaProjectMappings() {
-    try {
-      const [mappingsRes, listRes] = await Promise.all([
-        fetch("/api/settings/vikunja-projects"),
-        fetch("/api/settings/vikunja-projects/list"),
-      ]);
-      if (mappingsRes.ok) {
-        const data = await mappingsRes.json();
-        for (const mapping of data.mappings || []) {
-          if (mapping.category === "event_checklists") {
-            setVikunjaEventChecklistsId(String(mapping.project_id));
-          } else if (mapping.category === "weather_alerts") {
-            setVikunjaWeatherAlertsId(String(mapping.project_id));
-          } else if (mapping.category === "treatments") {
-            setVikunjaTreatmentsId(String(mapping.project_id));
-          }
-        }
-      }
-      if (listRes.ok) {
-        const data = await listRes.json();
-        setVikunjaProjects(data.projects || []);
-      }
-    } catch {
-      // Failed to fetch — fields will show placeholder
-    }
-  }
-
-  async function saveVikunjaProjects() {
-    setVikunjaSaving(true);
-    setVikunjaMessage("");
-    try {
-      const mappings = [];
-      if (vikunjaEventChecklistsId.trim()) {
-        mappings.push({ category: "event_checklists", project_id: Number(vikunjaEventChecklistsId) });
-      }
-      if (vikunjaWeatherAlertsId.trim()) {
-        mappings.push({ category: "weather_alerts", project_id: Number(vikunjaWeatherAlertsId) });
-      }
-      if (vikunjaTreatmentsId.trim()) {
-        mappings.push({ category: "treatments", project_id: Number(vikunjaTreatmentsId) });
-      }
-      if (mappings.length === 0) {
-        setVikunjaMessage("No projects selected");
-        setVikunjaSaving(false);
-        return;
-      }
-      const res = await fetch("/api/settings/vikunja-projects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mappings }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      setVikunjaMessage("Project mappings saved");
-    } catch {
-      setVikunjaMessage("Failed to save project mappings");
-    } finally {
-      setVikunjaSaving(false);
     }
   }
 
@@ -298,6 +223,31 @@ export default function IntegrationsSection() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Reminders list (Apple Reminders)
+                    </label>
+                    <select
+                      value={icloudSettings.write_reminders_calendar_id || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          write_reminders_calendar_id: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None (don&apos;t sync reminders)</option>
+                      {calendars.map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For event checklists, blanket alerts, and treatment reminders
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={saveIcloudSettings}
@@ -329,125 +279,6 @@ export default function IntegrationsSection() {
               <p className="text-xs text-[var(--text-muted)]">
                 Set <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">ICLOUD_APPLE_ID</code> and{" "}
                 <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">ICLOUD_APP_PASSWORD</code> environment variables to enable.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Vikunja */}
-        <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                Vikunja
-              </h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Task sync for Apple Reminders integration
-              </p>
-            </div>
-            <StatusBadge
-              configured={status?.vikunja.configured ?? false}
-              connected={status?.vikunja.connected ?? false}
-            />
-          </div>
-          {status?.vikunja.configured ? (
-            <div className="mt-3 space-y-3 text-sm">
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Status</span>
-                  <span className={status.vikunja.connected ? "text-[var(--success-text)]" : "text-[var(--error-text)]"}>
-                    {status.vikunja.connected ? "Connected" : "Connection failed"}
-                  </span>
-                </div>
-                {status.vikunja.version && (
-                  <div className="flex justify-between">
-                    <span className="text-[var(--text-muted)]">Version</span>
-                    <span className="text-[var(--text-primary)]">{status.vikunja.version}</span>
-                  </div>
-                )}
-                {status.vikunja.error && !status.vikunja.connected && (
-                  <div className="flex justify-between">
-                    <span className="text-[var(--text-muted)]">Error</span>
-                    <span className="text-[var(--error-text)]">{status.vikunja.error}</span>
-                  </div>
-                )}
-              </div>
-              {status.vikunja.connected && (
-                <>
-                  <div className="border-t border-[var(--border-light)] pt-3">
-                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Event Checklists project
-                    </label>
-                    <select
-                      value={vikunjaEventChecklistsId}
-                      onChange={(e) => setVikunjaEventChecklistsId(e.target.value)}
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                    >
-                      <option value="">Using default</option>
-                      {vikunjaProjects.map((p) => (
-                        <option key={p.id} value={String(p.id)}>{p.title}</option>
-                      ))}
-                    </select>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      For show/vet/farrier checklists
-                    </p>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Weather Alerts project
-                    </label>
-                    <select
-                      value={vikunjaWeatherAlertsId}
-                      onChange={(e) => setVikunjaWeatherAlertsId(e.target.value)}
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                    >
-                      <option value="">Using default</option>
-                      {vikunjaProjects.map((p) => (
-                        <option key={p.id} value={String(p.id)}>{p.title}</option>
-                      ))}
-                    </select>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      For blanket reminders, footing alerts
-                    </p>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Treatment Reminders project
-                    </label>
-                    <select
-                      value={vikunjaTreatmentsId}
-                      onChange={(e) => setVikunjaTreatmentsId(e.target.value)}
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                    >
-                      <option value="">Using default</option>
-                      {vikunjaProjects.map((p) => (
-                        <option key={p.id} value={String(p.id)}>{p.title}</option>
-                      ))}
-                    </select>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      For recurring treatment schedules
-                    </p>
-                  </div>
-                  <div>
-                    <button
-                      onClick={saveVikunjaProjects}
-                      disabled={vikunjaSaving}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                    >
-                      {vikunjaSaving ? "Saving..." : "Save"}
-                    </button>
-                  </div>
-                  {vikunjaMessage && (
-                    <p className="text-xs text-[var(--text-muted)]">{vikunjaMessage}</p>
-                  )}
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="mt-3 rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
-              <p className="text-xs text-[var(--text-muted)]">
-                Set <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">VIKUNJA_URL</code> and{" "}
-                <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[10px]">VIKUNJA_API_TOKEN</code> environment variables to enable.
               </p>
             </div>
           )}

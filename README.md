@@ -12,7 +12,7 @@ A self-hosted equestrian management app for budget tracking, ride logging with g
 - **Gait Detection** — Automatic walk/trot/canter classification via accelerometer on Apple Watch
 - **Calendar & Events** — Monthly calendar with color-coded event types, ride scheduling, and day detail views
 - **Weather Integration** — Apple WeatherKit forecasts for ride planning with temperature, wind, and conditions
-- **Checklists** — Daily/weekly barn checklists with optional Vikunja sync for shared task management
+- **Checklists** — Daily/weekly barn checklists with iCloud Reminders sync
 - **Email Ingest** — Forward receipts via email webhook to auto-create budget transactions
 - **Apple Watch App** — Standalone watchOS companion with GPS tracking, heart rate, and offline sync
 - **Dark Mode** — Full light/dark theme with system preference detection
@@ -252,16 +252,13 @@ Visit `http://localhost:3100`.
 | `BOOTSTRAP_SCHEMA` | No | Auto-apply schema on first run (default: `1`) |
 | `SEED_DEFAULT_USER` | No | Seed default login on first run (default: `1`) |
 | `APP_PORT` | No | Host port mapping (default: `3500`) |
-| `VIKUNJA_URL` | No | Vikunja instance URL for checklist sync |
-| `VIKUNJA_API_TOKEN` | No | Vikunja API bearer token |
-| `VIKUNJA_PROJECT_ID` | No | Vikunja project ID for Barnbook |
 | `WEATHERKIT_KEY_ID` | No | Apple WeatherKit key ID |
 | `WEATHERKIT_TEAM_ID` | No | Apple Developer team ID |
 | `WEATHERKIT_SERVICE_ID` | No | WeatherKit service identifier |
 | `WEATHERKIT_PRIVATE_KEY` | No | WeatherKit private key (base64) |
 | `EMAIL_INGEST_SECRET` | No | Shared secret for email webhook |
 
-Optional integrations (Vikunja, WeatherKit, email) work without configuration — features gracefully degrade when credentials are not set.
+Optional integrations (iCloud, WeatherKit, email) work without configuration — features gracefully degrade when credentials are not set.
 
 ## Apple Watch Companion
 
@@ -293,5 +290,5 @@ Open `watch/Barnbook.xcodeproj` in Xcode 15+ to build and deploy. Requires macOS
 - **Missing tables or columns:**
   - Run `npm run db:migrate` (or restart the Docker container, which runs migrations automatically).
 - **Integrations not working:**
-  - Check that the relevant environment variables are set (Vikunja, WeatherKit, etc.).
+  - Check that the relevant environment variables are set (iCloud, WeatherKit, etc.).
   - Features degrade gracefully — missing credentials won't break the app.

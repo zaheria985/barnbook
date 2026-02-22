@@ -24,6 +24,14 @@ export interface CalendarReminder {
   completed: boolean;
 }
 
+// Normalize a date value (Date object or string) to "YYYY-MM-DDT12:00:00.000Z"
+// Uses noon UTC so the date never shifts in any US timezone.
+export function toNoonUTC(val: string | Date): string {
+  const iso = val instanceof Date ? val.toISOString() : String(val);
+  const dateOnly = iso.split("T")[0];
+  return `${dateOnly}T12:00:00.000Z`;
+}
+
 export function isConfigured(): boolean {
   return !!(process.env.ICLOUD_APPLE_ID && process.env.ICLOUD_APP_PASSWORD);
 }
@@ -182,7 +190,8 @@ export async function fetchEvents(
 }
 
 export async function fetchReminders(
-  calendarIds: string[]
+  calendarIds: string[],
+  includeCompleted = false
 ): Promise<CalendarReminder[]> {
   const client = await createClient();
   const calendars = await client.fetchCalendars();
@@ -201,8 +210,9 @@ export async function fetchReminders(
     for (const obj of objects) {
       if (obj.data) {
         const reminders = parseVTodos(obj.data as string);
-        // Only include incomplete reminders
-        allReminders.push(...reminders.filter((r) => !r.completed));
+        allReminders.push(
+          ...reminders.filter((r) => includeCompleted || !r.completed)
+        );
       }
     }
   }
@@ -282,4 +292,53 @@ export async function deleteEvent(
       calendarObject: target,
     });
   }
+}
+
+export async function writeReminder(
+  calendarId: string,
+  reminder: { title: string; due?: string | Date | null; description?: string }
+): Promise<string> {
+  const client = await createClient();
+  const calendars = await client.fetchCalendars();
+  const calendar = calendars.find((c: DAVCalendar) => c.url === calendarId);
+
+  if (!calendar) {
+    throw new Error(`Calendar not found: ${calendarId}`);
+  }
+
+  const uid = `barnbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@barnbook`;
+
+  const dueDate = reminder.due ? new Date(toNoonUTC(reminder.due)) : null;
+
+  const vcalendar = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Barnbook//Reminder//EN",
+    "BEGIN:VTODO",
+    `UID:${uid}`,
+    `DTSTAMP:${formatICalDate(new Date())}`,
+    dueDate ? `DUE:${formatICalDate(dueDate)}` : "",
+    `SUMMARY:${reminder.title}`,
+    reminder.description ? `DESCRIPTION:${reminder.description}` : "",
+    "STATUS:NEEDS-ACTION",
+    "END:VTODO",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+
+  await client.createCalendarObject({
+    calendar,
+    filename: `${uid}.ics`,
+    iCalString: vcalendar,
+  });
+
+  return uid;
+}
+
+export async function deleteReminder(
+  calendarId: string,
+  uid: string
+): Promise<void> {
+  return deleteEvent(calendarId, uid);
 }

@@ -6,7 +6,7 @@ export interface EventChecklistItem {
   title: string;
   due_date: string | null;
   is_completed: boolean;
-  vikunja_task_id: string | null;
+  reminder_uid: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -14,7 +14,7 @@ export interface EventChecklistItem {
 
 export async function getChecklist(eventId: string): Promise<EventChecklistItem[]> {
   const res = await pool.query(
-    `SELECT id, event_id, title, due_date, is_completed, vikunja_task_id,
+    `SELECT id, event_id, title, due_date, is_completed, reminder_uid,
             sort_order, created_at, updated_at
      FROM event_checklists WHERE event_id = $1
      ORDER BY sort_order`,
@@ -36,7 +36,7 @@ export async function applyTemplate(
      FROM checklist_template_items cti
      WHERE cti.template_id = $2
      ORDER BY cti.sort_order
-     RETURNING id, event_id, title, due_date, is_completed, vikunja_task_id,
+     RETURNING id, event_id, title, due_date, is_completed, reminder_uid,
                sort_order, created_at, updated_at`,
     [eventId, templateId]
   );
@@ -49,7 +49,7 @@ export async function toggleChecklistItem(
   const res = await pool.query(
     `UPDATE event_checklists SET is_completed = NOT is_completed, updated_at = now()
      WHERE id = $1
-     RETURNING id, event_id, title, due_date, is_completed, vikunja_task_id,
+     RETURNING id, event_id, title, due_date, is_completed, reminder_uid,
                sort_order, created_at, updated_at`,
     [id]
   );
@@ -65,7 +65,7 @@ export async function addChecklistItem(data: {
   const res = await pool.query(
     `INSERT INTO event_checklists (event_id, title, due_date, sort_order)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, event_id, title, due_date, is_completed, vikunja_task_id,
+     RETURNING id, event_id, title, due_date, is_completed, reminder_uid,
                sort_order, created_at, updated_at`,
     [data.event_id, data.title, data.due_date ?? null, data.sort_order ?? 0]
   );

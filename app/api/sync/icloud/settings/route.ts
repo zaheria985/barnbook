@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   const settings = await getIcloudSettings();
-  return NextResponse.json(settings || { read_calendar_ids: [], write_calendar_id: null });
+  return NextResponse.json(settings || { read_calendar_ids: [], write_calendar_id: null, write_reminders_calendar_id: null });
 }
 
 export async function PUT(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { read_calendar_ids, write_calendar_id } = body;
+    const { read_calendar_ids, write_calendar_id, write_reminders_calendar_id } = body;
 
     if (!Array.isArray(read_calendar_ids)) {
       return NextResponse.json(
@@ -35,7 +35,8 @@ export async function PUT(request: NextRequest) {
 
     const settings = await updateIcloudSettings(
       read_calendar_ids,
-      write_calendar_id ?? null
+      write_calendar_id ?? null,
+      write_reminders_calendar_id ?? null
     );
 
     return NextResponse.json(settings);

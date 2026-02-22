@@ -96,7 +96,7 @@ export default function EventDetailPage() {
     setSyncing(true);
     setSyncStatus("idle");
     try {
-      const res = await fetch("/api/sync/vikunja", {
+      const res = await fetch("/api/sync/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event_id: id }),
@@ -119,7 +119,7 @@ export default function EventDetailPage() {
     setPulling(true);
     setSyncStatus("idle");
     try {
-      const res = await fetch("/api/sync/vikunja/pull", { method: "POST" });
+      const res = await fetch("/api/sync/reminders/pull", { method: "POST" });
       if (res.status === 503) {
         setSyncStatus("not_configured");
         return;
@@ -285,16 +285,16 @@ export default function EventDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-              Vikunja Sync
+              Reminders
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              {event.vikunja_task_id
-                ? "Synced to Vikunja"
-                : "Push this event and checklist to Vikunja/Apple Reminders"}
+              {event.reminder_uid
+                ? "Synced to iCloud Reminders"
+                : "Push this event and checklist to iCloud Reminders"}
             </p>
           </div>
           <div className="flex gap-2">
-            {event.vikunja_task_id && (
+            {event.reminder_uid && (
               <button
                 onClick={handlePullFromReminders}
                 disabled={pulling}
@@ -310,7 +310,7 @@ export default function EventDetailPage() {
             >
               {syncing
                 ? "Syncing..."
-                : event.vikunja_task_id
+                : event.reminder_uid
                 ? "Re-sync"
                 : "Push to Reminders"}
             </button>
@@ -318,17 +318,17 @@ export default function EventDetailPage() {
         </div>
         {syncStatus === "success" && (
           <p className="mt-2 text-xs text-[var(--success-text)]">
-            Successfully synced to Vikunja!
+            Successfully synced to iCloud Reminders!
           </p>
         )}
         {syncStatus === "pull_success" && (
           <p className="mt-2 text-xs text-[var(--success-text)]">
-            Checklist status updated from Vikunja.
+            Checklist status updated from iCloud Reminders.
           </p>
         )}
         {syncStatus === "not_configured" && (
           <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Vikunja is not configured. Set VIKUNJA_URL and VIKUNJA_API_TOKEN environment variables.
+            Select a Reminders list in Settings &gt; Integrations.
           </p>
         )}
       </div>

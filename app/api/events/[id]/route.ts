@@ -44,7 +44,7 @@ export async function PUT(
       entry_due_date: body.entry_due_date,
       notes: body.notes !== undefined ? (body.notes?.trim() || null) : undefined,
       checklist_template_id: body.checklist_template_id,
-      vikunja_task_id: body.vikunja_task_id,
+      reminder_uid: body.reminder_uid,
     });
 
     if (!event) {

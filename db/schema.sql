@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS events (
   entry_due_date DATE,
   notes TEXT,
   checklist_template_id UUID REFERENCES checklist_templates(id) ON DELETE SET NULL,
-  vikunja_task_id TEXT,
+  reminder_uid TEXT,
   is_confirmed BOOLEAN NOT NULL DEFAULT false,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS event_checklists (
   title TEXT NOT NULL,
   due_date DATE,
   is_completed BOOLEAN NOT NULL DEFAULT false,
-  vikunja_task_id TEXT,
+  reminder_uid TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -266,14 +266,38 @@ CREATE TABLE IF NOT EXISTS footing_feedback (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Vikunja Task Map
-CREATE TABLE IF NOT EXISTS vikunja_task_map (
+-- Blanket Reminders
+CREATE TABLE IF NOT EXISTS blanket_reminders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  vikunja_task_id TEXT NOT NULL,
-  event_id UUID REFERENCES events(id) ON DELETE CASCADE,
-  checklist_id UUID REFERENCES event_checklists(id) ON DELETE CASCADE,
-  sync_type TEXT NOT NULL DEFAULT 'push',
-  synced_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  date DATE NOT NULL UNIQUE,
+  overnight_low_f INTEGER NOT NULL,
+  reminder_uid TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Treatment Schedules
+CREATE TABLE IF NOT EXISTS treatment_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  horse_id UUID REFERENCES horses(id) ON DELETE CASCADE,
+  frequency_days INTEGER NOT NULL,
+  start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  end_date DATE,
+  occurrence_count INTEGER,
+  notes TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Treatment Reminders
+CREATE TABLE IF NOT EXISTS treatment_reminders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  schedule_id UUID NOT NULL REFERENCES treatment_schedules(id) ON DELETE CASCADE,
+  due_date DATE NOT NULL,
+  reminder_uid TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(schedule_id, due_date)
 );
 
 -- Vendor Mappings
@@ -335,6 +359,7 @@ CREATE TABLE IF NOT EXISTS icloud_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   read_calendar_ids TEXT[] NOT NULL DEFAULT '{}',
   write_calendar_id TEXT,
+  write_reminders_calendar_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

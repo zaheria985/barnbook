@@ -12,7 +12,7 @@ export interface Event {
   entry_due_date: string | null;
   notes: string | null;
   checklist_template_id: string | null;
-  vikunja_task_id: string | null;
+  reminder_uid: string | null;
   is_confirmed: boolean;
   created_by: string | null;
   created_at: string;
@@ -45,12 +45,12 @@ export interface UpdateEventData {
   entry_due_date?: string | null;
   notes?: string | null;
   checklist_template_id?: string | null;
-  vikunja_task_id?: string | null;
+  reminder_uid?: string | null;
   is_confirmed?: boolean;
 }
 
 const EVENT_COLUMNS = `id, title, event_type, start_date, end_date, start_time, end_time,
-            location, entry_due_date, notes, checklist_template_id, vikunja_task_id,
+            location, entry_due_date, notes, checklist_template_id, reminder_uid,
             is_confirmed, created_by, created_at, updated_at`;
 
 export async function getEvents(from?: string, to?: string): Promise<Event[]> {
@@ -160,9 +160,9 @@ export async function updateEvent(
     fields.push(`checklist_template_id = $${idx++}`);
     values.push(data.checklist_template_id);
   }
-  if (data.vikunja_task_id !== undefined) {
-    fields.push(`vikunja_task_id = $${idx++}`);
-    values.push(data.vikunja_task_id);
+  if (data.reminder_uid !== undefined) {
+    fields.push(`reminder_uid = $${idx++}`);
+    values.push(data.reminder_uid);
   }
   if (data.is_confirmed !== undefined) {
     fields.push(`is_confirmed = $${idx++}`);
