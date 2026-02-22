@@ -25,42 +25,20 @@ export async function getChecklist(eventId: string): Promise<EventChecklistItem[
 
 export async function applyTemplate(
   eventId: string,
-  templateId: string,
-  eventStartDate: string | Date
+  templateId: string
 ): Promise<EventChecklistItem[]> {
-  const itemsRes = await pool.query(
-    `SELECT title, days_before_event, sort_order
-     FROM checklist_template_items WHERE template_id = $1
-     ORDER BY sort_order`,
-    [templateId]
-  );
-
-  if (itemsRes.rows.length === 0) return [];
-
-  // Handle both Date objects from pg and ISO strings
-  const dateStr = eventStartDate instanceof Date
-    ? eventStartDate.toISOString().split("T")[0]
-    : String(eventStartDate).split("T")[0];
-  const startDate = new Date(dateStr + "T00:00:00");
-  const insertValues: string[] = [];
-  const insertParams: (string | number | boolean)[] = [];
-  let idx = 1;
-
-  for (const item of itemsRes.rows) {
-    const dueDate = new Date(startDate);
-    dueDate.setDate(dueDate.getDate() - item.days_before_event);
-    const dueDateStr = dueDate.toISOString().split("T")[0];
-
-    insertValues.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
-    insertParams.push(eventId, item.title, dueDateStr, false, item.sort_order);
-  }
-
+  // Do all date math in SQL to avoid JS Date parsing issues
   const res = await pool.query(
     `INSERT INTO event_checklists (event_id, title, due_date, is_completed, sort_order)
-     VALUES ${insertValues.join(", ")}
+     SELECT $1, cti.title,
+            (SELECT e.start_date FROM events e WHERE e.id = $1) - (cti.days_before_event * INTERVAL '1 day'),
+            false, cti.sort_order
+     FROM checklist_template_items cti
+     WHERE cti.template_id = $2
+     ORDER BY cti.sort_order
      RETURNING id, event_id, title, due_date, is_completed, vikunja_task_id,
                sort_order, created_at, updated_at`,
-    insertParams
+    [eventId, templateId]
   );
   return res.rows;
 }

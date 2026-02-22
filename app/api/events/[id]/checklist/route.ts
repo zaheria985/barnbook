@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getChecklist, applyTemplate } from "@/lib/queries/event-checklists";
-import { getEvent } from "@/lib/queries/events";
 
 export async function GET(
   _request: NextRequest,
@@ -37,13 +36,7 @@ export async function POST(
       return NextResponse.json({ error: "template_id is required" }, { status: 400 });
     }
 
-    const event = await getEvent(params.id);
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    const startDate = String(event.start_date).split("T")[0];
-    const items = await applyTemplate(params.id, body.template_id, startDate);
+    const items = await applyTemplate(params.id, body.template_id);
     return NextResponse.json(items, { status: 201 });
   } catch (error) {
     console.error("Failed to apply template:", error);
