@@ -149,12 +149,30 @@ export async function listCalendars(): Promise<CalendarInfo[]> {
   const client = await createClient();
   const calendars = await client.fetchCalendars();
 
-  return calendars.map((cal: DAVCalendar) => ({
-    id: cal.url,
-    name: (cal.displayName as string) || "Untitled",
-    color: (cal as Record<string, unknown>).calendarColor as string | null ?? null,
-    type: (cal.components?.includes("VTODO") ? "reminders" : "calendar") as "calendar" | "reminders",
-  }));
+  // Debug: log raw CalDAV collections to help diagnose missing lists
+  console.log("CalDAV discovered collections:", calendars.map((cal: DAVCalendar) => ({
+    url: cal.url,
+    displayName: cal.displayName,
+    components: cal.components,
+  })));
+
+  return calendars.map((cal: DAVCalendar) => {
+    // Detect type: VTODO = reminders, VEVENT = calendar
+    // If components is empty/undefined, default to "reminders" — iCloud calendar
+    // collections reliably report VEVENT, but custom Reminders lists may not report VTODO
+    const hasVTODO = cal.components?.includes("VTODO");
+    const hasVEVENT = cal.components?.includes("VEVENT");
+    const type: "calendar" | "reminders" = hasVTODO ? "reminders"
+      : hasVEVENT ? "calendar"
+      : "reminders";
+
+    return {
+      id: cal.url,
+      name: (cal.displayName as string) || "Untitled",
+      color: (cal as Record<string, unknown>).calendarColor as string | null ?? null,
+      type,
+    };
+  });
 }
 
 export async function fetchEvents(
