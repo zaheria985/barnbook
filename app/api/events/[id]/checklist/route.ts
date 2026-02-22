@@ -42,7 +42,8 @@ export async function POST(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const items = await applyTemplate(params.id, body.template_id, event.start_date);
+    const startDate = String(event.start_date).split("T")[0];
+    const items = await applyTemplate(params.id, body.template_id, startDate);
     return NextResponse.json(items, { status: 201 });
   } catch (error) {
     console.error("Failed to apply template:", error);
