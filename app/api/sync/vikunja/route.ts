@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
       synced_items: checklist.length,
     });
   } catch (error) {
-    console.error("Failed to sync to Vikunja:", error);
-    return NextResponse.json({ error: "Failed to sync to Vikunja" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to sync to Vikunja:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

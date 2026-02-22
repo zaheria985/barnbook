@@ -25,30 +25,37 @@ function getHeaders(): Record<string, string> {
   };
 }
 
+// Normalize a date value (Date object or string) to "YYYY-MM-DDT12:00:00.000Z"
+// Uses noon UTC so the date never shifts in any US timezone.
+function toNoonUTC(val: string | Date): string {
+  const iso = val instanceof Date ? val.toISOString() : String(val);
+  const dateOnly = iso.split("T")[0];
+  return `${dateOnly}T12:00:00.000Z`;
+}
+
 export async function createTask(data: {
   title: string;
   description?: string;
-  due_date?: string | null;
+  due_date?: string | Date | null;
   project_id: number;
 }): Promise<VikunjaTask> {
+  const body = {
+    title: data.title,
+    description: data.description || "",
+    due_date: data.due_date ? toNoonUTC(data.due_date) : null,
+  };
+
   const res = await fetch(`${getBaseUrl()}/api/v1/projects/${data.project_id}/tasks`, {
     method: "PUT",
     headers: getHeaders(),
-    body: JSON.stringify({
-      title: data.title,
-      description: data.description || "",
-      due_date: data.due_date
-        ? (() => {
-            // Extract date part and use noon UTC to avoid timezone date shifts
-            const d = String(data.due_date).split("T")[0];
-            return `${d}T12:00:00.000Z`;
-          })()
-        : null,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    throw new Error(`Vikunja create task failed: ${res.status}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Vikunja create task failed: ${res.status} — ${text} (project=${data.project_id}, due=${body.due_date})`
+    );
   }
 
   return res.json();

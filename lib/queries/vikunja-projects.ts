@@ -26,8 +26,9 @@ export async function getProjectId(category: string): Promise<number> {
   if (res.rows[0]) {
     return res.rows[0].project_id;
   }
-  // Fall back to env var
-  return Number(process.env.NEXT_PUBLIC_VIKUNJA_PROJECT_ID || "1");
+  throw new Error(
+    `No Vikunja project mapped for "${category}". Configure in Settings > Integrations.`
+  );
 }
 
 export async function upsertProjectMapping(
