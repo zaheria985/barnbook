@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as caldav from "@/lib/caldav";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -18,7 +20,9 @@ export async function GET() {
 
   try {
     const calendars = await caldav.listCalendars();
-    return NextResponse.json({ calendars });
+    return NextResponse.json({ calendars }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     console.error("Failed to list iCloud calendars:", error);
     return NextResponse.json(
