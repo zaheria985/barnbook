@@ -26,7 +26,7 @@ export async function getChecklist(eventId: string): Promise<EventChecklistItem[
 export async function applyTemplate(
   eventId: string,
   templateId: string,
-  eventStartDate: string
+  eventStartDate: string | Date
 ): Promise<EventChecklistItem[]> {
   const itemsRes = await pool.query(
     `SELECT title, days_before_event, sort_order
@@ -37,7 +37,11 @@ export async function applyTemplate(
 
   if (itemsRes.rows.length === 0) return [];
 
-  const startDate = new Date(eventStartDate + "T00:00:00");
+  // Handle both Date objects from pg and ISO strings
+  const dateStr = eventStartDate instanceof Date
+    ? eventStartDate.toISOString().split("T")[0]
+    : String(eventStartDate).split("T")[0];
+  const startDate = new Date(dateStr + "T00:00:00");
   const insertValues: string[] = [];
   const insertParams: (string | number | boolean)[] = [];
   let idx = 1;
