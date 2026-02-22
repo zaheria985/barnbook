@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       );
 
       // --- Blanket reminders ---
-      if (icloudSettings.write_reminders_calendar_id) {
+      if (icloudSettings.reminders_weather_id) {
         const { getReminder, createReminder, deleteOldReminders } = await import("@/lib/queries/blanket-reminders");
 
         // Clean up old reminders
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
           if (existing) continue;
 
           try {
-            const uid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
+            const uid = await caldav.writeReminder(icloudSettings.reminders_weather_id, {
               title: `\uD83D\uDC34 Put blanket on tonight \u2014 low ${day.blanket_low_f}\u00B0F`,
               due: `${day.date}T18:00:00`,
             });
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Treatment reminders ---
-    if (icloudSettings.write_reminders_calendar_id) {
+    if (icloudSettings.reminders_treatments_id) {
       try {
         const {
           getSchedules: getTreatmentSchedules,
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
               const title = schedule.horse_name
                 ? `\uD83D\uDC8A ${schedule.name} \u2014 ${schedule.horse_name}`
                 : `\uD83D\uDC8A ${schedule.name}`;
-              const uid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
+              const uid = await caldav.writeReminder(icloudSettings.reminders_treatments_id, {
                 title,
                 due: `${dueDate}T09:00:00`,
               });
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
 
     // --- Auto-push confirmed event checklists to iCloud Reminders ---
     let checklistsPushed = 0;
-    if (icloudSettings.write_reminders_calendar_id) {
+    if (icloudSettings.reminders_checklists_id) {
       try {
         const { getChecklist } = await import("@/lib/queries/event-checklists");
 
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
 
         for (const event of unpushed.rows) {
           try {
-            const mainUid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
+            const mainUid = await caldav.writeReminder(icloudSettings.reminders_checklists_id, {
               title: event.title,
               description: `${event.event_type} | ${event.location || "No location"}`,
               due: event.start_date,
@@ -369,7 +369,7 @@ export async function POST(request: NextRequest) {
 
             const checklist = await getChecklist(event.id);
             for (const item of checklist) {
-              const itemUid = await caldav.writeReminder(icloudSettings.write_reminders_calendar_id, {
+              const itemUid = await caldav.writeReminder(icloudSettings.reminders_checklists_id, {
                 title: item.title,
                 due: item.due_date,
               });

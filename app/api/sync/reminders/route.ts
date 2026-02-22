@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
   }
 
   const icloudSettings = await getIcloudSettings();
-  if (!icloudSettings?.write_reminders_calendar_id) {
+  if (!icloudSettings?.reminders_checklists_id) {
     return NextResponse.json(
-      { error: "No Reminders list configured. Select one in Settings > Integrations.", configured: false },
+      { error: "No Event checklists list configured. Select one in Settings > Integrations.", configured: false },
       { status: 503 }
     );
   }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const calendarId = icloudSettings.write_reminders_calendar_id;
+    const calendarId = icloudSettings.reminders_checklists_id;
 
     // Create main reminder for the event
     const mainUid = await caldav.writeReminder(calendarId, {

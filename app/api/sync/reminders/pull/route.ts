@@ -19,15 +19,15 @@ export async function POST() {
   }
 
   const icloudSettings = await getIcloudSettings();
-  if (!icloudSettings?.write_reminders_calendar_id) {
+  if (!icloudSettings?.reminders_checklists_id) {
     return NextResponse.json(
-      { error: "No Reminders list configured", configured: false },
+      { error: "No Event checklists list configured", configured: false },
       { status: 503 }
     );
   }
 
   try {
-    const calendarId = icloudSettings.write_reminders_calendar_id;
+    const calendarId = icloudSettings.reminders_checklists_id;
 
     // Fetch all reminders including completed ones
     const reminders = await caldav.fetchReminders([calendarId], true);

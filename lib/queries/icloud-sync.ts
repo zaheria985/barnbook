@@ -4,7 +4,9 @@ export interface IcloudSettings {
   id: string;
   read_calendar_ids: string[];
   write_calendar_id: string | null;
-  write_reminders_calendar_id: string | null;
+  reminders_checklists_id: string | null;
+  reminders_weather_id: string | null;
+  reminders_treatments_id: string | null;
   updated_at: string;
 }
 
@@ -31,7 +33,7 @@ export interface SuggestedWindow {
 
 export async function getIcloudSettings(): Promise<IcloudSettings | null> {
   const res = await pool.query(
-    `SELECT id, read_calendar_ids, write_calendar_id, write_reminders_calendar_id, updated_at
+    `SELECT id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at
      FROM icloud_settings
      LIMIT 1`
   );
@@ -41,26 +43,28 @@ export async function getIcloudSettings(): Promise<IcloudSettings | null> {
 export async function updateIcloudSettings(
   readIds: string[],
   writeId: string | null,
-  writeRemindersId: string | null
+  remindersChecklistsId: string | null,
+  remindersWeatherId: string | null,
+  remindersTreatmentsId: string | null
 ): Promise<IcloudSettings> {
   // Upsert — only one settings row
   const existing = await getIcloudSettings();
   if (existing) {
     const res = await pool.query(
       `UPDATE icloud_settings
-       SET read_calendar_ids = $1, write_calendar_id = $2, write_reminders_calendar_id = $3, updated_at = now()
-       WHERE id = $4
-       RETURNING id, read_calendar_ids, write_calendar_id, write_reminders_calendar_id, updated_at`,
-      [readIds, writeId, writeRemindersId, existing.id]
+       SET read_calendar_ids = $1, write_calendar_id = $2, reminders_checklists_id = $3, reminders_weather_id = $4, reminders_treatments_id = $5, updated_at = now()
+       WHERE id = $6
+       RETURNING id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at`,
+      [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId, existing.id]
     );
     return res.rows[0];
   }
 
   const res = await pool.query(
-    `INSERT INTO icloud_settings (read_calendar_ids, write_calendar_id, write_reminders_calendar_id)
-     VALUES ($1, $2, $3)
-     RETURNING id, read_calendar_ids, write_calendar_id, write_reminders_calendar_id, updated_at`,
-    [readIds, writeId, writeRemindersId]
+    `INSERT INTO icloud_settings (read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at`,
+    [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId]
   );
   return res.rows[0];
 }

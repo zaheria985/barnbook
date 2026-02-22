@@ -328,7 +328,7 @@ export default function EventDetailPage() {
         )}
         {syncStatus === "not_configured" && (
           <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Select a Reminders list in Settings &gt; Integrations.
+            Select an Event checklists list in Settings &gt; Integrations.
           </p>
         )}
       </div>

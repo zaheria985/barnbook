@@ -359,7 +359,9 @@ CREATE TABLE IF NOT EXISTS icloud_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   read_calendar_ids TEXT[] NOT NULL DEFAULT '{}',
   write_calendar_id TEXT,
-  write_reminders_calendar_id TEXT,
+  reminders_checklists_id TEXT,
+  reminders_weather_id TEXT,
+  reminders_treatments_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

@@ -24,7 +24,9 @@ interface IcloudCalendar {
 interface IcloudSettings {
   read_calendar_ids: string[];
   write_calendar_id: string | null;
-  write_reminders_calendar_id: string | null;
+  reminders_checklists_id: string | null;
+  reminders_weather_id: string | null;
+  reminders_treatments_id: string | null;
 }
 
 export default function IntegrationsSection() {
@@ -37,7 +39,9 @@ export default function IntegrationsSection() {
   const [icloudSettings, setIcloudSettings] = useState<IcloudSettings>({
     read_calendar_ids: [],
     write_calendar_id: null,
-    write_reminders_calendar_id: null,
+    reminders_checklists_id: null,
+    reminders_weather_id: null,
+    reminders_treatments_id: null,
   });
   const [calendarsLoading, setCalendarsLoading] = useState(false);
   const [icloudSaving, setIcloudSaving] = useState(false);
@@ -60,7 +64,9 @@ export default function IntegrationsSection() {
         setIcloudSettings({
           read_calendar_ids: data.read_calendar_ids || [],
           write_calendar_id: data.write_calendar_id || null,
-          write_reminders_calendar_id: data.write_reminders_calendar_id || null,
+          reminders_checklists_id: data.reminders_checklists_id || null,
+          reminders_weather_id: data.reminders_weather_id || null,
+          reminders_treatments_id: data.reminders_treatments_id || null,
         });
       }
     } catch {
@@ -226,19 +232,27 @@ export default function IntegrationsSection() {
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                      Reminders list (Apple Reminders)
+                      Apple Reminders lists
+                    </label>
+                    <p className="mb-2 text-xs text-[var(--text-muted)]">
+                      Map each reminder type to an existing list in Apple Reminders. Create lists in Apple Reminders first, then select them here.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Event checklists
                     </label>
                     <select
-                      value={icloudSettings.write_reminders_calendar_id || ""}
+                      value={icloudSettings.reminders_checklists_id || ""}
                       onChange={(e) =>
                         setIcloudSettings((prev) => ({
                           ...prev,
-                          write_reminders_calendar_id: e.target.value || null,
+                          reminders_checklists_id: e.target.value || null,
                         }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                     >
-                      <option value="">None (don&apos;t sync reminders)</option>
+                      <option value="">None</option>
                       {calendars.filter((c) => c.type === "reminders").map((cal) => (
                         <option key={cal.id} value={cal.id}>
                           {cal.name}
@@ -246,7 +260,57 @@ export default function IntegrationsSection() {
                       ))}
                     </select>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      For event checklists, blanket alerts, and treatment reminders
+                      For show/vet/farrier checklists
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Weather alerts
+                    </label>
+                    <select
+                      value={icloudSettings.reminders_weather_id || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          reminders_weather_id: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None</option>
+                      {calendars.filter((c) => c.type === "reminders").map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For blanket reminders
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Treatment reminders
+                    </label>
+                    <select
+                      value={icloudSettings.reminders_treatments_id || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          reminders_treatments_id: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None</option>
+                      {calendars.filter((c) => c.type === "reminders").map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      For recurring treatment schedules
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
