@@ -41,9 +41,14 @@ services:
   radicale:
     image: tomsquest/docker-radicale:latest
     restart: unless-stopped
+    entrypoint: /entrypoint.sh
+    environment:
+      RADICALE_USER: ${RADICALE_USER:-barnbook}
+      RADICALE_PASSWORD: ${RADICALE_PASSWORD}
     volumes:
       - radicale_data:/data
       - ./radicale/config:/etc/radicale/config:ro
+      - ./radicale/entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "${RADICALE_PORT:-5232}:5232"
     healthcheck:
