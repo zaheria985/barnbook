@@ -39,10 +39,28 @@ jobs:
             type=sha,format=short
             type=ref,event=tag
 
-      - name: Build and push
+      - name: Build and push app
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Extract Radicale metadata
+        id: radicale-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/barnbook-radicale
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=ref,event=tag
+
+      - name: Build and push radicale
+        uses: docker/build-push-action@v6
+        with:
+          context: ./radicale
+          push: true
+          tags: ${{ steps.radicale-meta.outputs.tags }}
+          labels: ${{ steps.radicale-meta.outputs.labels }}
