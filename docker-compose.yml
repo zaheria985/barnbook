@@ -27,12 +27,29 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       BOOTSTRAP_SCHEMA: ${BOOTSTRAP_SCHEMA:-1}
       SEED_DEFAULT_USER: ${SEED_DEFAULT_USER:-1}
+      RADICALE_URL: http://radicale:5232
+      RADICALE_USER: ${RADICALE_USER:-barnbook}
+      RADICALE_PASSWORD: ${RADICALE_PASSWORD}
     ports:
       - "${APP_PORT:-3500}:3500"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3500/api/auth/providers',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
+      retries: 5
+
+  radicale:
+    image: tomsquest/docker-radicale:latest
+    restart: unless-stopped
+    volumes:
+      - radicale_data:/data
+      - ./radicale/config:/etc/radicale/config:ro
+    ports:
+      - "${RADICALE_PORT:-5232}:5232"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5232/.well-known/caldav"]
+      interval: 10s
+      timeout: 3s
       retries: 5
 
   cron:
@@ -53,3 +70,4 @@ services:
 
 volumes:
   barnbook_data:
+  radicale_data:

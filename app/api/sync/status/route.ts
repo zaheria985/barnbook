@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as weatherkit from "@/lib/openweathermap";
 import * as caldav from "@/lib/caldav";
+import { isConfigured as radicaleConfigured } from "@/lib/radicale";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,9 @@ export async function GET() {
     },
     icloud: {
       configured: caldav.isConfigured(),
+    },
+    radicale: {
+      configured: radicaleConfigured(),
     },
   });
 }

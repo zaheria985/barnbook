@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as caldav from "@/lib/caldav";
+import * as radicale from "@/lib/radicale";
 import { getEvent, updateEvent } from "@/lib/queries/events";
 import { getChecklist } from "@/lib/queries/event-checklists";
 import { getIcloudSettings } from "@/lib/queries/icloud-sync";
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
   }
 
   const icloudSettings = await getIcloudSettings();
-  if (!icloudSettings?.reminders_checklists_id) {
+  if (!icloudSettings?.reminders_checklists_id && !(icloudSettings?.use_radicale && icloudSettings?.radicale_checklists_collection)) {
     return NextResponse.json(
       { error: "No Event checklists list configured. Select one in Settings > Integrations.", configured: false },
       { status: 503 }
@@ -41,10 +42,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const calendarId = icloudSettings.reminders_checklists_id;
+    // Helper: write reminder to Radicale or iCloud based on settings
+    const writeReminderFn = async (
+      reminder: { title: string; due?: string | Date | null; description?: string }
+    ): Promise<string> => {
+      if (icloudSettings!.use_radicale) {
+        const collectionUrl = icloudSettings!.radicale_checklists_collection;
+        if (!collectionUrl) throw new Error("No Radicale checklists collection configured");
+        return radicale.writeReminder(collectionUrl, reminder);
+      }
+      const calendarId = icloudSettings!.reminders_checklists_id;
+      if (!calendarId) throw new Error("No checklists list configured");
+      return caldav.writeReminder(calendarId, reminder);
+    };
 
     // Create main reminder for the event
-    const mainUid = await caldav.writeReminder(calendarId, {
+    const mainUid = await writeReminderFn({
       title: event.title,
       due: event.start_date,
       description: `${event.event_type} | ${event.location || "No location"}`,
@@ -56,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Sync checklist items as individual reminders
     const checklist = await getChecklist(event_id);
     for (const item of checklist) {
-      const itemUid = await caldav.writeReminder(calendarId, {
+      const itemUid = await writeReminderFn({
         title: item.title,
         due: item.due_date,
       });

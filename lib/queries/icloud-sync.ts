@@ -7,6 +7,10 @@ export interface IcloudSettings {
   reminders_checklists_id: string | null;
   reminders_weather_id: string | null;
   reminders_treatments_id: string | null;
+  use_radicale: boolean;
+  radicale_checklists_collection: string | null;
+  radicale_weather_collection: string | null;
+  radicale_treatments_collection: string | null;
   updated_at: string;
 }
 
@@ -33,7 +37,7 @@ export interface SuggestedWindow {
 
 export async function getIcloudSettings(): Promise<IcloudSettings | null> {
   const res = await pool.query(
-    `SELECT id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at
+    `SELECT id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, use_radicale, radicale_checklists_collection, radicale_weather_collection, radicale_treatments_collection, updated_at
      FROM icloud_settings
      LIMIT 1`
   );
@@ -45,26 +49,31 @@ export async function updateIcloudSettings(
   writeId: string | null,
   remindersChecklistsId: string | null,
   remindersWeatherId: string | null,
-  remindersTreatmentsId: string | null
+  remindersTreatmentsId: string | null,
+  useRadicale: boolean = false,
+  radicaleChecklistsCollection: string | null = null,
+  radicaleWeatherCollection: string | null = null,
+  radicaleTreatmentsCollection: string | null = null
 ): Promise<IcloudSettings> {
+  const returningCols = `id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, use_radicale, radicale_checklists_collection, radicale_weather_collection, radicale_treatments_collection, updated_at`;
   // Upsert — only one settings row
   const existing = await getIcloudSettings();
   if (existing) {
     const res = await pool.query(
       `UPDATE icloud_settings
-       SET read_calendar_ids = $1, write_calendar_id = $2, reminders_checklists_id = $3, reminders_weather_id = $4, reminders_treatments_id = $5, updated_at = now()
-       WHERE id = $6
-       RETURNING id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at`,
-      [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId, existing.id]
+       SET read_calendar_ids = $1, write_calendar_id = $2, reminders_checklists_id = $3, reminders_weather_id = $4, reminders_treatments_id = $5, use_radicale = $6, radicale_checklists_collection = $7, radicale_weather_collection = $8, radicale_treatments_collection = $9, updated_at = now()
+       WHERE id = $10
+       RETURNING ${returningCols}`,
+      [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId, useRadicale, radicaleChecklistsCollection, radicaleWeatherCollection, radicaleTreatmentsCollection, existing.id]
     );
     return res.rows[0];
   }
 
   const res = await pool.query(
-    `INSERT INTO icloud_settings (read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, updated_at`,
-    [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId]
+    `INSERT INTO icloud_settings (read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id, use_radicale, radicale_checklists_collection, radicale_weather_collection, radicale_treatments_collection)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING ${returningCols}`,
+    [readIds, writeId, remindersChecklistsId, remindersWeatherId, remindersTreatmentsId, useRadicale, radicaleChecklistsCollection, radicaleWeatherCollection, radicaleTreatmentsCollection]
   );
   return res.rows[0];
 }

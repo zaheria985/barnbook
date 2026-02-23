@@ -13,7 +13,17 @@ export async function GET() {
   }
 
   const settings = await getIcloudSettings();
-  return NextResponse.json(settings || { read_calendar_ids: [], write_calendar_id: null, reminders_checklists_id: null, reminders_weather_id: null, reminders_treatments_id: null });
+  return NextResponse.json(settings || {
+    read_calendar_ids: [],
+    write_calendar_id: null,
+    reminders_checklists_id: null,
+    reminders_weather_id: null,
+    reminders_treatments_id: null,
+    use_radicale: false,
+    radicale_checklists_collection: null,
+    radicale_weather_collection: null,
+    radicale_treatments_collection: null,
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -24,7 +34,11 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { read_calendar_ids, write_calendar_id, reminders_checklists_id, reminders_weather_id, reminders_treatments_id } = body;
+    const {
+      read_calendar_ids, write_calendar_id,
+      reminders_checklists_id, reminders_weather_id, reminders_treatments_id,
+      use_radicale, radicale_checklists_collection, radicale_weather_collection, radicale_treatments_collection
+    } = body;
 
     if (!Array.isArray(read_calendar_ids)) {
       return NextResponse.json(
@@ -38,7 +52,11 @@ export async function PUT(request: NextRequest) {
       write_calendar_id ?? null,
       reminders_checklists_id ?? null,
       reminders_weather_id ?? null,
-      reminders_treatments_id ?? null
+      reminders_treatments_id ?? null,
+      use_radicale ?? false,
+      radicale_checklists_collection ?? null,
+      radicale_weather_collection ?? null,
+      radicale_treatments_collection ?? null
     );
 
     return NextResponse.json(settings);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as caldav from "@/lib/caldav";
+import * as radicale from "@/lib/radicale";
 import { getSettings } from "@/lib/queries/weather-settings";
 import { getKeywords } from "@/lib/queries/detection-keywords";
 import { createEvent } from "@/lib/queries/events";
@@ -45,6 +46,32 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Helper: write reminder to Radicale or iCloud based on settings
+    const writeReminderTo = async (
+      listType: "checklists" | "weather" | "treatments",
+      reminder: { title: string; due?: string | Date | null; description?: string }
+    ): Promise<string | null> => {
+      if (icloudSettings.use_radicale) {
+        const collectionMap = {
+          checklists: icloudSettings.radicale_checklists_collection,
+          weather: icloudSettings.radicale_weather_collection,
+          treatments: icloudSettings.radicale_treatments_collection,
+        };
+        const collectionUrl = collectionMap[listType];
+        if (!collectionUrl) return null;
+        return radicale.writeReminder(collectionUrl, reminder);
+      } else {
+        const calendarMap = {
+          checklists: icloudSettings.reminders_checklists_id,
+          weather: icloudSettings.reminders_weather_id,
+          treatments: icloudSettings.reminders_treatments_id,
+        };
+        const calendarId = calendarMap[listType];
+        if (!calendarId) return null;
+        return caldav.writeReminder(calendarId, reminder);
+      }
+    };
 
     const now = new Date();
     const from = new Date(now);
@@ -123,7 +150,7 @@ export async function POST(request: NextRequest) {
       );
 
       // --- Blanket reminders ---
-      if (icloudSettings.reminders_weather_id) {
+      if (icloudSettings.reminders_weather_id || (icloudSettings.use_radicale && icloudSettings.radicale_weather_collection)) {
         const { getReminder, createReminder, deleteOldReminders } = await import("@/lib/queries/blanket-reminders");
 
         // Clean up old reminders
@@ -137,10 +164,11 @@ export async function POST(request: NextRequest) {
           if (existing) continue;
 
           try {
-            const uid = await caldav.writeReminder(icloudSettings.reminders_weather_id, {
+            const uid = await writeReminderTo("weather", {
               title: `\uD83D\uDC34 Put blanket on tonight \u2014 low ${day.blanket_low_f}\u00B0F`,
               due: `${day.date}T18:00:00`,
             });
+            if (!uid) continue;
             await createReminder(day.date, day.blanket_low_f, uid);
           } catch (err) {
             console.error("Failed to create blanket reminder:", err);
@@ -281,7 +309,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Treatment reminders ---
-    if (icloudSettings.reminders_treatments_id) {
+    if (icloudSettings.reminders_treatments_id || (icloudSettings.use_radicale && icloudSettings.radicale_treatments_collection)) {
       try {
         const {
           getSchedules: getTreatmentSchedules,
@@ -323,10 +351,11 @@ export async function POST(request: NextRequest) {
               const title = schedule.horse_name
                 ? `\uD83D\uDC8A ${schedule.name} \u2014 ${schedule.horse_name}`
                 : `\uD83D\uDC8A ${schedule.name}`;
-              const uid = await caldav.writeReminder(icloudSettings.reminders_treatments_id, {
+              const uid = await writeReminderTo("treatments", {
                 title,
                 due: `${dueDate}T09:00:00`,
               });
+              if (!uid) continue;
               await createTreatmentReminder(schedule.id, dueDate, uid);
             } catch (err) {
               console.error("Failed to create treatment reminder:", err);
@@ -340,7 +369,7 @@ export async function POST(request: NextRequest) {
 
     // --- Auto-push confirmed event checklists to iCloud Reminders ---
     let checklistsPushed = 0;
-    if (icloudSettings.reminders_checklists_id) {
+    if (icloudSettings.reminders_checklists_id || (icloudSettings.use_radicale && icloudSettings.radicale_checklists_collection)) {
       try {
         const { getChecklist } = await import("@/lib/queries/event-checklists");
 
@@ -356,11 +385,12 @@ export async function POST(request: NextRequest) {
 
         for (const event of unpushed.rows) {
           try {
-            const mainUid = await caldav.writeReminder(icloudSettings.reminders_checklists_id, {
+            const mainUid = await writeReminderTo("checklists", {
               title: event.title,
               description: `${event.event_type} | ${event.location || "No location"}`,
               due: event.start_date,
             });
+            if (!mainUid) continue;
 
             await pool.query(
               `UPDATE events SET reminder_uid = $1 WHERE id = $2`,
@@ -369,10 +399,11 @@ export async function POST(request: NextRequest) {
 
             const checklist = await getChecklist(event.id);
             for (const item of checklist) {
-              const itemUid = await caldav.writeReminder(icloudSettings.reminders_checklists_id, {
+              const itemUid = await writeReminderTo("checklists", {
                 title: item.title,
                 due: item.due_date,
               });
+              if (!itemUid) continue;
               await pool.query(
                 `UPDATE event_checklists SET reminder_uid = $1 WHERE id = $2`,
                 [itemUid, item.id]
