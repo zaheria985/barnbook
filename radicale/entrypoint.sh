@@ -8,8 +8,8 @@ PASS="${RADICALE_PASSWORD}"
 if [ -z "$PASS" ]; then
   echo "WARNING: RADICALE_PASSWORD not set, skipping htpasswd generation"
 else
-  # Generate bcrypt hash using passlib (bundled with radicale)
-  HASH=$(python3 -c "from passlib.hash import bcrypt; print(bcrypt.using(rounds=12).hash('${PASS}'))")
+  # Generate htpasswd with plain text (Radicale supports it)
+  echo "${USER}:${PASS}" > /data/users
   echo "${USER}:${HASH}" > /data/users
   echo "Created htpasswd for user: ${USER}"
 fi
