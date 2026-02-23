@@ -15,4 +15,4 @@ else
 fi
 
 # Hand off to the default radicale entrypoint
-exec python3 -m radicale --config /etc/radicale/config
+exec /venv/bin/radicale --config /config/config
