@@ -340,113 +340,6 @@ export default function IntegrationsSection() {
                       For recurring treatment schedules
                     </p>
                   </div>
-                  {/* Radicale Self-Hosted Reminders */}
-                  {radicaleConfigured && (
-                    <>
-                      <div className="border-t border-[var(--border-light)] pt-3 mt-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <label className="text-xs font-medium text-[var(--text-muted)]">
-                            Reminders method
-                          </label>
-                        </div>
-                        <div className="flex gap-2 mb-3">
-                          <button
-                            onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: false }))}
-                            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                              !icloudSettings.use_radicale
-                                ? "bg-[var(--accent)] text-white"
-                                : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                            }`}
-                          >
-                            iCloud CalDAV
-                          </button>
-                          <button
-                            onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: true }))}
-                            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                              icloudSettings.use_radicale
-                                ? "bg-[var(--accent)] text-white"
-                                : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                            }`}
-                          >
-                            Radicale (self-hosted)
-                          </button>
-                        </div>
-                      </div>
-                      {icloudSettings.use_radicale && (
-                        <>
-                          <p className="text-xs text-[var(--text-muted)] mb-2">
-                            Reminders are written to your self-hosted Radicale server. Add this CalDAV account to your iPhone to see them in Apple Reminders.
-                          </p>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                              Event checklists
-                            </label>
-                            <select
-                              value={icloudSettings.radicale_checklists_collection || ""}
-                              onChange={(e) =>
-                                setIcloudSettings((prev) => ({
-                                  ...prev,
-                                  radicale_checklists_collection: e.target.value || null,
-                                }))
-                              }
-                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                            >
-                              <option value="">None</option>
-                              {radicaleCollections.map((col) => (
-                                <option key={col.id} value={col.id}>
-                                  {col.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                              Weather alerts
-                            </label>
-                            <select
-                              value={icloudSettings.radicale_weather_collection || ""}
-                              onChange={(e) =>
-                                setIcloudSettings((prev) => ({
-                                  ...prev,
-                                  radicale_weather_collection: e.target.value || null,
-                                }))
-                              }
-                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                            >
-                              <option value="">None</option>
-                              {radicaleCollections.map((col) => (
-                                <option key={col.id} value={col.id}>
-                                  {col.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                              Treatment reminders
-                            </label>
-                            <select
-                              value={icloudSettings.radicale_treatments_collection || ""}
-                              onChange={(e) =>
-                                setIcloudSettings((prev) => ({
-                                  ...prev,
-                                  radicale_treatments_collection: e.target.value || null,
-                                }))
-                              }
-                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
-                            >
-                              <option value="">None</option>
-                              {radicaleCollections.map((col) => (
-                                <option key={col.id} value={col.id}>
-                                  {col.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={saveIcloudSettings}
@@ -482,6 +375,127 @@ export default function IntegrationsSection() {
             </div>
           )}
         </div>
+
+        {/* Radicale Self-Hosted Reminders */}
+        {radicaleConfigured && (
+          <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Radicale Reminders
+                </h2>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Self-hosted CalDAV reminders via Radicale
+                </p>
+              </div>
+              <StatusBadge configured={true} connected={true} />
+            </div>
+            <div className="mt-3 space-y-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: false }))}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                    !icloudSettings.use_radicale
+                      ? "bg-[var(--accent)] text-white"
+                      : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                >
+                  iCloud CalDAV
+                </button>
+                <button
+                  onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: true }))}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                    icloudSettings.use_radicale
+                      ? "bg-[var(--accent)] text-white"
+                      : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                >
+                  Radicale (self-hosted)
+                </button>
+              </div>
+              {icloudSettings.use_radicale && (
+                <>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Reminders are written to your self-hosted Radicale server. Add this CalDAV account to your iPhone to see them in Apple Reminders.
+                  </p>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Event checklists
+                    </label>
+                    <select
+                      value={icloudSettings.radicale_checklists_collection || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          radicale_checklists_collection: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None</option>
+                      {radicaleCollections.map((col) => (
+                        <option key={col.id} value={col.id}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Weather alerts
+                    </label>
+                    <select
+                      value={icloudSettings.radicale_weather_collection || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          radicale_weather_collection: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None</option>
+                      {radicaleCollections.map((col) => (
+                        <option key={col.id} value={col.id}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                      Treatment reminders
+                    </label>
+                    <select
+                      value={icloudSettings.radicale_treatments_collection || ""}
+                      onChange={(e) =>
+                        setIcloudSettings((prev) => ({
+                          ...prev,
+                          radicale_treatments_collection: e.target.value || null,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="">None</option>
+                      {radicaleCollections.map((col) => (
+                        <option key={col.id} value={col.id}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+              <button
+                onClick={saveIcloudSettings}
+                disabled={icloudSaving}
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {icloudSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* WeatherKit */}
         <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
