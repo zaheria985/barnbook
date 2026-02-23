@@ -9,8 +9,7 @@ if [ -z "$PASS" ]; then
   echo "WARNING: RADICALE_PASSWORD not set, skipping htpasswd generation"
 else
   # Generate htpasswd with plain text (Radicale supports it)
-  echo "${USER}:${PASS}" > /data/users
-  echo "${USER}:${HASH}" > /data/users
+  printf '%s:%s\n' "$USER" "$PASS" > /data/users
   echo "Created htpasswd for user: ${USER}"
 fi
 
