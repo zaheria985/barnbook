@@ -135,7 +135,12 @@ export default function IntegrationsSection() {
         body: JSON.stringify(icloudSettings),
       });
       if (!res.ok) throw new Error("Failed to save");
-      setIcloudMessage("Settings saved");
+      const data = await res.json();
+      setIcloudMessage(
+        data.reminders_reset
+          ? "Settings saved — old reminders cleared. Hit Sync Now to create them in Radicale."
+          : "Settings saved"
+      );
     } catch {
       setIcloudMessage("Failed to save settings");
     } finally {
@@ -153,9 +158,14 @@ export default function IntegrationsSection() {
         throw new Error(data.error || "Sync failed");
       }
       const data = await res.json();
-      setIcloudMessage(
-        `Synced: ${data.events_found} events found, ${data.keywords_matched} matched, ${data.windows_suggested} ride windows`
-      );
+      const parts = [
+        `${data.events_found} events found`,
+        `${data.keywords_matched} matched`,
+        `${data.windows_suggested} ride windows`,
+      ];
+      const reminders = (data.blanket_reminders || 0) + (data.treatment_reminders || 0) + (data.checklists_pushed || 0);
+      if (reminders > 0) parts.push(`${reminders} reminders created`);
+      setIcloudMessage(`Synced: ${parts.join(", ")}`);
     } catch (err) {
       setIcloudMessage(err instanceof Error ? err.message : "Sync failed");
     } finally {

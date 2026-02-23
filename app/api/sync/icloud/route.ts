@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let blanketRemindersCreated = 0;
+    let treatmentRemindersCreated = 0;
+
     // --- Ride window calculation ---
     let windowsSuggested = 0;
     const weatherSettings = await getSettings();
@@ -170,6 +173,7 @@ export async function POST(request: NextRequest) {
             });
             if (!uid) continue;
             await createReminder(day.date, day.blanket_low_f, uid);
+            blanketRemindersCreated++;
           } catch (err) {
             console.error("Failed to create blanket reminder:", err);
           }
@@ -357,6 +361,7 @@ export async function POST(request: NextRequest) {
               });
               if (!uid) continue;
               await createTreatmentReminder(schedule.id, dueDate, uid);
+              treatmentRemindersCreated++;
             } catch (err) {
               console.error("Failed to create treatment reminder:", err);
             }
@@ -425,6 +430,8 @@ export async function POST(request: NextRequest) {
       keywords_matched: keywordsMatched,
       windows_suggested: windowsSuggested,
       checklists_pushed: checklistsPushed,
+      blanket_reminders: blanketRemindersCreated,
+      treatment_reminders: treatmentRemindersCreated,
     });
   } catch (error) {
     console.error("iCloud sync failed:", error);
