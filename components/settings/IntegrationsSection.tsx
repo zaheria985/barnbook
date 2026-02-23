@@ -111,8 +111,8 @@ export default function IntegrationsSection() {
         const data = await res.json();
         setStatus(data);
 
-        // If iCloud is configured, fetch calendars
-        if (data.icloud?.configured) {
+        // If iCloud or Radicale is configured, fetch calendars + collections
+        if (data.icloud?.configured || data.radicale?.configured) {
           fetchCalendars();
         }
 
