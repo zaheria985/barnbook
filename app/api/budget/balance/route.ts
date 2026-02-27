@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       getSavingsBalance(),
     ]);
 
-    if (existingBalance) {
+    if (existingBalance?.is_closed) {
       return NextResponse.json({
         ...existingBalance,
         savings_balance: savingsBalance,

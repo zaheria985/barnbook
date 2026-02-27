@@ -171,3 +171,58 @@ export async function closeMonth(
     client.release();
   }
 }
+
+export async function reopenMonth(
+  yearMonth: string
+): Promise<{ balance: MonthlyBalance; savingsBalance: number }> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const existing = await client.query(
+      `SELECT * FROM monthly_balances WHERE year_month = $1`,
+      [yearMonth]
+    );
+
+    if (!existing.rows[0]) {
+      await client.query("ROLLBACK");
+      throw new Error("No closed month record found");
+    }
+
+    if (!existing.rows[0].is_closed) {
+      await client.query("ROLLBACK");
+      throw new Error("Month is not closed");
+    }
+
+    const netResult = Number(existing.rows[0].net_result);
+
+    if (netResult !== 0) {
+      await client.query(
+        `UPDATE horse_savings_account SET balance = balance - $1, updated_at = now()`,
+        [netResult]
+      );
+    }
+
+    const balanceRes = await client.query(
+      `UPDATE monthly_balances SET is_closed = false WHERE year_month = $1 RETURNING *`,
+      [yearMonth]
+    );
+
+    const savingsRes = await client.query(
+      `SELECT balance FROM horse_savings_account LIMIT 1`
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      balance: balanceRes.rows[0],
+      savingsBalance: Number(savingsRes.rows[0]?.balance || 0),
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

@@ -33,7 +33,9 @@ export default function MonthEndClosePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -75,6 +77,30 @@ export default function MonthEndClosePage() {
       setError(err instanceof Error ? err.message : "Failed to close month");
     } finally {
       setClosing(false);
+    }
+  }
+
+  async function handleReopen() {
+    setReopening(true);
+    try {
+      const res = await fetch("/api/budget/reopen-month", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to reopen month");
+      }
+
+      setSuccess(true);
+      setShowReopenConfirm(false);
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reopen month");
+    } finally {
+      setReopening(false);
     }
   }
 
@@ -188,7 +214,13 @@ export default function MonthEndClosePage() {
         ) : (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-center">
             <p className="font-medium text-[var(--text-primary)]">This month is closed.</p>
-            <p className="text-sm text-[var(--text-muted)]">No further edits can be made.</p>
+            <p className="mb-3 text-sm text-[var(--text-muted)]">No further edits can be made.</p>
+            <button
+              onClick={() => setShowReopenConfirm(true)}
+              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+            >
+              Reopen Month
+            </button>
           </div>
         )}
       </div>
@@ -223,6 +255,34 @@ export default function MonthEndClosePage() {
           <button
             onClick={() => setShowConfirm(false)}
             disabled={closing}
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showReopenConfirm}
+        onClose={() => setShowReopenConfirm(false)}
+        title="Reopen Month"
+      >
+        <p className="mb-4 text-[var(--text-secondary)]">
+          Reopen {new Date(month + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" })}?
+          The savings adjustment of {formatCurrency(net)} will be reversed.
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleReopen}
+            disabled={reopening}
+            className="flex-1 rounded-lg bg-[var(--interactive)] py-2 font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
+          >
+            {reopening ? "Reopening..." : "Confirm Reopen"}
+          </button>
+          <button
+            onClick={() => setShowReopenConfirm(false)}
+            disabled={reopening}
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
           >
             Cancel
