@@ -13,6 +13,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   farrier: "Farrier",
   lesson: "Lesson",
   pony_club: "Pony Club",
+  clinic: "Clinic",
+  ride: "Ride",
   other: "Other",
 };
 
@@ -22,6 +24,8 @@ const EVENT_TYPE_BADGE: Record<string, string> = {
   farrier: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
   lesson: "bg-[var(--success-bg)] text-[var(--accent-blue)]",
   pony_club: "bg-[var(--success-bg)] text-[var(--success-text)]",
+  clinic: "bg-[var(--interactive-light)] text-[var(--accent-teal)]",
+  ride: "bg-[var(--success-bg)] text-[var(--success-text)]",
   other: "bg-[var(--surface-muted)] text-[var(--text-secondary)]",
 };
 

@@ -10,6 +10,7 @@ const EVENT_TYPES = [
   { value: "farrier", label: "Farrier" },
   { value: "lesson", label: "Lesson" },
   { value: "pony_club", label: "Pony Club" },
+  { value: "clinic", label: "Clinic" },
   { value: "other", label: "Other" },
 ];
 

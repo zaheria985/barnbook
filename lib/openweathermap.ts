@@ -211,7 +211,7 @@ export async function getRecentRain(
   const results: HourlyRain[] = [];
 
   // Fetch day-before-yesterday and yesterday via timemachine
-  for (let daysAgo = 2; daysAgo >= 1; daysAgo--) {
+  for (let daysAgo = 2; daysAgo >= 0; daysAgo--) {
     const date = new Date(now);
     date.setDate(date.getDate() - daysAgo);
     date.setHours(12, 0, 0, 0); // noon for the timemachine timestamp

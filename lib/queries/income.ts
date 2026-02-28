@@ -242,3 +242,60 @@ export async function setMonthlyIncome(
   );
   return res.rows[0];
 }
+
+// ── Income Trends ──
+
+export interface IncomeTrend {
+  month: string; // "2026-01"
+  income: number;
+  sales: number;
+}
+
+export async function getIncomeTrends(
+  months: number = 12
+): Promise<IncomeTrend[]> {
+  // Generate trailing N months as YYYY-MM strings
+  const monthList: string[] = [];
+  const now = new Date();
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthList.push(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    );
+  }
+
+  const [incomeRes, salesRes] = await Promise.all([
+    pool.query(
+      `SELECT year_month AS month, SUM(actual_amount)::numeric AS total
+       FROM monthly_income
+       WHERE year_month >= $1
+       GROUP BY year_month
+       ORDER BY year_month`,
+      [monthList[0]]
+    ),
+    pool.query(
+      `SELECT TO_CHAR(date, 'YYYY-MM') AS month, SUM(amount)::numeric AS total
+       FROM sales
+       WHERE date >= date_trunc('month', now()) - make_interval(months => $1)
+       GROUP BY TO_CHAR(date, 'YYYY-MM')
+       ORDER BY month`,
+      [months - 1]
+    ),
+  ]);
+
+  const incomeByMonth = new Map<string, number>();
+  for (const row of incomeRes.rows) {
+    incomeByMonth.set(row.month, Number(row.total));
+  }
+
+  const salesByMonth = new Map<string, number>();
+  for (const row of salesRes.rows) {
+    salesByMonth.set(row.month, Number(row.total));
+  }
+
+  return monthList.map((m) => ({
+    month: m,
+    income: incomeByMonth.get(m) || 0,
+    sales: salesByMonth.get(m) || 0,
+  }));
+}

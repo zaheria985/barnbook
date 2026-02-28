@@ -8,6 +8,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   farrier: "bg-[var(--accent-amber)]",
   lesson: "bg-[var(--accent-blue)]",
   pony_club: "bg-[var(--accent-emerald)]",
+  clinic: "bg-[var(--accent-teal)]",
   other: "bg-[var(--text-muted)]",
 };
 

@@ -22,6 +22,6 @@ Barnbook — Next.js 14 equestrian management app (TypeScript, PostgreSQL, Tailw
 
 ## Conventions
 - CSS uses design token variables (`var(--interactive)`, `var(--success-text)`, etc.), not Tailwind color classes
-- Event types: show, vet, farrier, lesson, pony_club, ride, other — when adding types, update labels/badges in `EventCard.tsx`, `digest/page.tsx`
+- Event types: show, vet, farrier, lesson, pony_club, clinic, ride, other — when adding types, update labels/badges in `EventCard.tsx`, `digest/page.tsx`
 - No semicolon-free style — standard TypeScript with semicolons
 - Prefer `Promise.all()` for parallel independent queries in API routes

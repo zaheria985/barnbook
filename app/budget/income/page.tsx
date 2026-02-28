@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { IncomeCategory, MonthlyIncome } from "@/lib/queries/income";
 import type { Sale } from "@/lib/queries/sales";
 import IncomeCategoryManager from "@/components/settings/IncomeCategoryManager";
+import IncomeTrendsChart from "@/components/budget/IncomeTrendsChart";
 import Modal from "@/components/ui/Modal";
 
 function formatCurrency(n: number) {
@@ -332,6 +333,8 @@ export default function IncomePage() {
         <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
       ) : (
         <div className="space-y-6">
+          <IncomeTrendsChart />
+
           <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
