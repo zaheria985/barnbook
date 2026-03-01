@@ -1,6 +1,6 @@
 "use client";
 
-import DayCell from "./DayCell";
+import DayCell, { type SpannedEvent } from "./DayCell";
 import type { Event } from "@/lib/queries/events";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -39,12 +39,50 @@ export default function MonthGrid({
     cells.push({ date: dateStr, day: d });
   }
 
-  // Group events by date
-  const eventsByDate: Record<string, Event[]> = {};
+  // Group events by date, spanning multi-day events across all days
+  const eventsByDate: Record<string, SpannedEvent[]> = {};
+
   for (const event of events) {
-    const dateKey = event.start_date.split("T")[0];
-    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
-    eventsByDate[dateKey].push(event);
+    const startKey = event.start_date.split("T")[0];
+    const endKey = event.end_date ? event.end_date.split("T")[0] : null;
+    const isMultiDay = endKey && endKey > startKey;
+
+    if (!isMultiDay) {
+      // Single-day event
+      if (!eventsByDate[startKey]) eventsByDate[startKey] = [];
+      eventsByDate[startKey].push({ ...event, spanPosition: "single" });
+    } else {
+      // Multi-day event: place on each day within the visible month
+      const spanStart = new Date(startKey + "T12:00:00");
+      const spanEnd = new Date(endKey + "T12:00:00");
+      const monthStart = new Date(`${year}-${String(month).padStart(2, "0")}-01T12:00:00`);
+      const monthEnd = new Date(year, month, 0);
+      const monthEndDate = new Date(
+        `${year}-${String(month).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}T12:00:00`
+      );
+
+      // Clamp to visible month
+      const iterStart = spanStart < monthStart ? monthStart : spanStart;
+      const iterEnd = spanEnd > monthEndDate ? monthEndDate : spanEnd;
+
+      const cursor = new Date(iterStart);
+      while (cursor <= iterEnd) {
+        const dateStr = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+        let spanPosition: SpannedEvent["spanPosition"];
+        if (dateStr === startKey && dateStr === endKey) {
+          spanPosition = "single";
+        } else if (dateStr === startKey) {
+          spanPosition = "start";
+        } else if (dateStr === endKey) {
+          spanPosition = "end";
+        } else {
+          spanPosition = "middle";
+        }
+        if (!eventsByDate[dateStr]) eventsByDate[dateStr] = [];
+        eventsByDate[dateStr].push({ ...event, spanPosition });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
   }
 
   const today = new Date().toISOString().split("T")[0];

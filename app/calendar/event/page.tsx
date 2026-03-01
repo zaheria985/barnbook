@@ -36,6 +36,7 @@ function NewEventPage() {
   const [notes, setNotes] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
+  const [recurrenceRule, setRecurrenceRule] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -66,6 +67,7 @@ function NewEventPage() {
           entry_due_date: entryDueDate || null,
           notes: notes.trim() || null,
           checklist_template_id: templateId || null,
+          recurrence_rule: recurrenceRule || null,
         }),
       });
 
@@ -171,6 +173,28 @@ function NewEventPage() {
                 className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+              Repeat
+            </label>
+            <select
+              value={recurrenceRule}
+              onChange={(e) => setRecurrenceRule(e.target.value)}
+              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+            >
+              <option value="">None</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+            {recurrenceRule && (
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Future events will be created automatically
+              </p>
+            )}
           </div>
 
           <div>

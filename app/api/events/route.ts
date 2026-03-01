@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getEvents, createEvent } from "@/lib/queries/events";
+import { getEvents, createEvent, generateRecurringInstances } from "@/lib/queries/events";
+import type { RecurrenceRule } from "@/lib/queries/events";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -39,6 +40,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "start_date is required" }, { status: 400 });
     }
 
+    const validRules = ["weekly", "biweekly", "monthly", "yearly"];
+    const recurrenceRule: RecurrenceRule | null =
+      body.recurrence_rule && validRules.includes(body.recurrence_rule)
+        ? body.recurrence_rule
+        : null;
+
     const event = await createEvent({
       title: body.title.trim(),
       event_type: body.event_type.trim(),
@@ -49,7 +56,13 @@ export async function POST(request: NextRequest) {
       notes: body.notes?.trim() || null,
       checklist_template_id: body.checklist_template_id || null,
       created_by: (session.user as { id: string }).id,
+      recurrence_rule: recurrenceRule,
     });
+
+    // Generate recurring instances if a recurrence rule is set
+    if (recurrenceRule) {
+      await generateRecurringInstances(event);
+    }
 
     return NextResponse.json(event, { status: 201 });
   } catch (error) {

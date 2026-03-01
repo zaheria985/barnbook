@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
     const horse = await createHorse({
       name: body.name.trim(),
       weight_lbs: body.weight_lbs != null ? Number(body.weight_lbs) : null,
+      breed: body.breed?.trim() || null,
+      color: body.color?.trim() || null,
+      date_of_birth: body.date_of_birth || null,
+      registration_number: body.registration_number?.trim() || null,
     });
 
     return NextResponse.json(horse, { status: 201 });

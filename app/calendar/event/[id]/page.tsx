@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import ChecklistView from "@/components/calendar/ChecklistView";
 import type { Event } from "@/lib/queries/events";
 import type { EventChecklistItem } from "@/lib/queries/event-checklists";
 import type { ChecklistTemplate } from "@/lib/queries/checklist-templates";
+import type { EventAttachment } from "@/lib/queries/event-attachments";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   show: "Show",
@@ -39,22 +40,27 @@ export default function EventDetailPage() {
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [attachments, setAttachments] = useState<EventAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [syncing, setSyncing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "pull_success" | "not_configured">("idle");
 
   const fetchData = useCallback(async () => {
     try {
-      const [eventRes, checklistRes, templatesRes] = await Promise.all([
+      const [eventRes, checklistRes, templatesRes, attachmentsRes] = await Promise.all([
         fetch(`/api/events/${id}`),
         fetch(`/api/events/${id}/checklist`),
         fetch("/api/templates"),
+        fetch(`/api/events/${id}/attachments`),
       ]);
 
       if (!eventRes.ok) throw new Error("Event not found");
       setEvent(await eventRes.json());
       if (checklistRes.ok) setChecklist(await checklistRes.json());
       if (templatesRes.ok) setTemplates(await templatesRes.json());
+      if (attachmentsRes.ok) setAttachments(await attachmentsRes.json());
     } catch {
       setError("Failed to load event");
     } finally {
@@ -139,7 +145,11 @@ export default function EventDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this event? This cannot be undone.")) return;
+    const isParent = event?.recurrence_rule && !event.is_recurring_instance;
+    const message = isParent
+      ? "Delete this event and all future recurring instances? This cannot be undone."
+      : "Delete this event? This cannot be undone.";
+    if (!confirm(message)) return;
     try {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -147,6 +157,57 @@ export default function EventDetailPage() {
     } catch {
       setError("Failed to delete event");
     }
+  }
+
+  async function handleUploadAttachment(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/events/${id}/attachments`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to upload");
+      const attachment = await res.json();
+      setAttachments((prev) => [...prev, attachment]);
+    } catch {
+      setError("Failed to upload attachment");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteAttachment(attachmentId: string) {
+    if (!confirm("Delete this attachment?")) return;
+    try {
+      const res = await fetch(`/api/events/${id}/attachments/${attachmentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch {
+      setError("Failed to delete attachment");
+    }
+  }
+
+  function isImage(mimeType: string) {
+    return mimeType.startsWith("image/");
+  }
+
+  function formatFileSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   if (loading) {
@@ -184,13 +245,37 @@ export default function EventDetailPage() {
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">
               {event.title}
             </h1>
-            <span
-              className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                EVENT_TYPE_BADGE[event.event_type] || EVENT_TYPE_BADGE.other
-              }`}
-            >
-              {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
-            </span>
+            <div className="mt-1 flex items-center gap-2">
+              <span
+                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  EVENT_TYPE_BADGE[event.event_type] || EVENT_TYPE_BADGE.other
+                }`}
+              >
+                {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
+              </span>
+              {(event.recurrence_rule || event.is_recurring_instance) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17 2l4 4-4 4" />
+                    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                    <path d="M7 22l-4-4 4-4" />
+                    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  {event.recurrence_rule
+                    ? event.recurrence_rule.charAt(0).toUpperCase() + event.recurrence_rule.slice(1)
+                    : "Recurring"}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={handleDelete}
@@ -282,6 +367,85 @@ export default function EventDetailPage() {
           )}
         </div>
         <ChecklistView items={checklist} onToggle={handleToggle} />
+      </div>
+
+      {/* Attachments */}
+      <div className="mt-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            Attachments
+          </h2>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="rounded-lg border border-[var(--interactive)] px-3 py-1.5 text-xs font-medium text-[var(--interactive)] hover:bg-[var(--interactive-light)] disabled:opacity-50 transition-colors"
+          >
+            {uploading ? "Uploading..." : "Upload"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleUploadAttachment}
+          />
+        </div>
+
+        {attachments.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">No attachments yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {attachments.map((att) => (
+              <li
+                key={att.id}
+                className="flex items-center gap-3 rounded-lg border border-[var(--border-light)] bg-[var(--surface-muted)] p-2"
+              >
+                {isImage(att.mime_type) ? (
+                  <a
+                    href={`/uploads/event-attachments/${att.filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0"
+                  >
+                    <img
+                      src={`/uploads/event-attachments/${att.filename}`}
+                      alt={att.original_name}
+                      className="h-12 w-12 rounded object-cover border border-[var(--border-light)]"
+                    />
+                  </a>
+                ) : (
+                  <a
+                    href={`/uploads/event-attachments/${att.filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border-light)] bg-[var(--surface)] text-xs font-medium text-[var(--text-muted)]"
+                  >
+                    {att.mime_type === "application/pdf" ? "PDF" : "FILE"}
+                  </a>
+                )}
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={`/uploads/event-attachments/${att.filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate text-sm font-medium text-[var(--interactive)] hover:underline"
+                  >
+                    {att.original_name}
+                  </a>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {formatFileSize(att.size_bytes)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteAttachment(att.id)}
+                  className="shrink-0 rounded p-1 text-xs text-[var(--error-text)] hover:bg-[var(--error-bg)] transition-colors"
+                  title="Delete attachment"
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Push to Reminders */}

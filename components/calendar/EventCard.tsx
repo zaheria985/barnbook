@@ -54,13 +54,34 @@ export default function EventCard({ event }: { event: Event }) {
           </p>
         )}
       </div>
-      <span
-        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-          EVENT_TYPE_BADGE[event.event_type] || EVENT_TYPE_BADGE.other
-        }`}
-      >
-        {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
-      </span>
+      <div className="flex shrink-0 items-center gap-1.5">
+        {(event.is_recurring_instance || event.recurrence_rule) && (
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[var(--text-muted)]"
+            aria-label="Recurring event"
+          >
+            <path d="M17 2l4 4-4 4" />
+            <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+            <path d="M7 22l-4-4 4-4" />
+            <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+          </svg>
+        )}
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+            EVENT_TYPE_BADGE[event.event_type] || EVENT_TYPE_BADGE.other
+          }`}
+        >
+          {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
+        </span>
+      </div>
     </Link>
   );
 }

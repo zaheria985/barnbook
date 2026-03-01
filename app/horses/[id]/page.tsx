@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 
 interface VetRecord {
@@ -15,6 +16,16 @@ interface VetRecord {
   cost: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface VetReceipt {
+  id: string;
+  vet_record_id: string;
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
 }
 
 interface VaccineRecord {
@@ -103,6 +114,11 @@ export default function HorseDetailPage() {
     id: string;
     name: string;
     weight_lbs: number | null;
+    breed: string | null;
+    color: string | null;
+    date_of_birth: string | null;
+    registration_number: string | null;
+    photo_url: string | null;
   } | null>(null);
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([]);
   const [barnSchedules, setBarnSchedules] = useState<TreatmentSchedule[]>([]);
@@ -133,6 +149,12 @@ export default function HorseDetailPage() {
   const [vetNotes, setVetNotes] = useState("");
   const [vetCost, setVetCost] = useState("");
   const [savingVet, setSavingVet] = useState(false);
+
+  // Vet receipt state
+  const [vetReceipts, setVetReceipts] = useState<Record<string, VetReceipt[]>>({});
+  const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
+  const receiptInputRef = useRef<HTMLInputElement>(null);
+  const [receiptTargetRecordId, setReceiptTargetRecordId] = useState<string | null>(null);
 
   // Vaccine records state
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
@@ -189,7 +211,25 @@ export default function HorseDetailPage() {
         setBarnSchedules(allSchedules.filter((s) => s.horse_id === null));
       }
 
-      if (vetRes.ok) setVetRecords(await vetRes.json());
+      if (vetRes.ok) {
+        const vets: VetRecord[] = await vetRes.json();
+        setVetRecords(vets);
+        // Fetch receipts for all vet records in parallel
+        if (vets.length > 0) {
+          const receiptResults = await Promise.all(
+            vets.map((v) =>
+              fetch(`/api/horses/${id}/vet-records/${v.id}/receipts`).then(
+                (r) => (r.ok ? r.json() : [])
+              )
+            )
+          );
+          const receiptsMap: Record<string, VetReceipt[]> = {};
+          vets.forEach((v, i) => {
+            receiptsMap[v.id] = receiptResults[i];
+          });
+          setVetReceipts(receiptsMap);
+        }
+      }
       if (vaccinesRes.ok) setVaccines(await vaccinesRes.json());
       if (farrierRes.ok) setFarrierRecords(await farrierRes.json());
     } catch {
@@ -355,6 +395,56 @@ export default function HorseDetailPage() {
       setVetRecords((prev) => prev.filter((r) => r.id !== recordId));
     } catch {
       setError("Failed to delete vet record");
+    }
+  }
+
+  // --- Receipt handlers ---
+  function openReceiptPicker(recordId: string) {
+    setReceiptTargetRecordId(recordId);
+    setTimeout(() => receiptInputRef.current?.click(), 0);
+  }
+  async function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !receiptTargetRecordId) return;
+    setUploadingReceipt(receiptTargetRecordId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(
+        `/api/horses/${id}/vet-records/${receiptTargetRecordId}/receipts`,
+        { method: "POST", body: formData }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
+      }
+      const receipt: VetReceipt = await res.json();
+      setVetReceipts((prev) => ({
+        ...prev,
+        [receiptTargetRecordId]: [...(prev[receiptTargetRecordId] || []), receipt],
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload receipt");
+    } finally {
+      setUploadingReceipt(null);
+      setReceiptTargetRecordId(null);
+      if (receiptInputRef.current) receiptInputRef.current.value = "";
+    }
+  }
+  async function handleDeleteReceipt(recordId: string, receiptId: string) {
+    if (!confirm("Delete this receipt?")) return;
+    try {
+      const res = await fetch(
+        `/api/horses/${id}/vet-records/${recordId}/receipts/${receiptId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) throw new Error("Failed to delete");
+      setVetReceipts((prev) => ({
+        ...prev,
+        [recordId]: (prev[recordId] || []).filter((r) => r.id !== receiptId),
+      }));
+    } catch {
+      setError("Failed to delete receipt");
     }
   }
 
@@ -713,15 +803,63 @@ export default function HorseDetailPage() {
       </Link>
 
       {/* Horse header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          {horse.name}
-        </h1>
-        {horse.weight_lbs != null && (
-          <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-            {horse.weight_lbs} lbs
-          </p>
+      <div className="mb-6 flex items-start gap-4">
+        {horse.photo_url ? (
+          <Image
+            src={horse.photo_url}
+            alt={horse.name}
+            width={80}
+            height={80}
+            className="rounded-full object-cover shrink-0"
+            style={{ width: 80, height: 80 }}
+          />
+        ) : (
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)]">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+            </svg>
+          </div>
         )}
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            {horse.name}
+          </h1>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-[var(--text-muted)]">
+            {horse.breed && <span>{horse.breed}</span>}
+            {horse.color && <span>{horse.color}</span>}
+            {horse.date_of_birth && (
+              <span>
+                {(() => {
+                  const dob = new Date(horse.date_of_birth.split("T")[0] + "T12:00:00");
+                  const now = new Date();
+                  let age = now.getFullYear() - dob.getFullYear();
+                  if (
+                    now.getMonth() < dob.getMonth() ||
+                    (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())
+                  ) {
+                    age--;
+                  }
+                  return `${age} yrs old`;
+                })()}
+              </span>
+            )}
+            {horse.weight_lbs != null && <span>{horse.weight_lbs} lbs</span>}
+            {horse.registration_number && (
+              <span>Reg# {horse.registration_number}</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -812,25 +950,68 @@ export default function HorseDetailPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {vetRecords.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-[var(--text-primary)]">{formatDate(r.visit_date)}</span>
-                      {r.cost && <span className="text-sm text-[var(--text-muted)]">{formatCost(r.cost)}</span>}
+            {vetRecords.map((r) => {
+              const receipts = vetReceipts[r.id] || [];
+              return (
+                <div key={r.id} className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[var(--text-primary)]">{formatDate(r.visit_date)}</span>
+                        {r.cost && <span className="text-sm text-[var(--text-muted)]">{formatCost(r.cost)}</span>}
+                      </div>
+                      {r.provider && <p className="mt-0.5 text-sm text-[var(--text-muted)]">{r.provider}</p>}
+                      {r.reason && <p className="mt-1 text-sm text-[var(--text-primary)]">{r.reason}</p>}
+                      {r.notes && <p className="mt-1 text-xs text-[var(--text-muted)] line-clamp-2">{r.notes}</p>}
                     </div>
-                    {r.provider && <p className="mt-0.5 text-sm text-[var(--text-muted)]">{r.provider}</p>}
-                    {r.reason && <p className="mt-1 text-sm text-[var(--text-primary)]">{r.reason}</p>}
-                    {r.notes && <p className="mt-1 text-xs text-[var(--text-muted)] line-clamp-2">{r.notes}</p>}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button onClick={() => openEditVet(r)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)]">Edit</button>
+                      <button onClick={() => handleDeleteVet(r.id)} className="text-xs text-[var(--error-text)] hover:underline">Delete</button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => openEditVet(r)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)]">Edit</button>
-                    <button onClick={() => handleDeleteVet(r.id)} className="text-xs text-[var(--error-text)] hover:underline">Delete</button>
+                  {/* Receipts / Attachments */}
+                  <div className="mt-3 border-t border-[var(--border-light)] pt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-[var(--text-muted)]">Receipts</span>
+                      <button
+                        onClick={() => openReceiptPicker(r.id)}
+                        disabled={uploadingReceipt === r.id}
+                        className="text-xs text-[var(--interactive)] hover:underline disabled:opacity-50"
+                      >
+                        {uploadingReceipt === r.id ? "Uploading..." : "+ Attach"}
+                      </button>
+                    </div>
+                    {receipts.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {receipts.map((receipt) => (
+                          <div
+                            key={receipt.id}
+                            className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-muted)] px-2 py-1"
+                          >
+                            <a
+                              href={`/uploads/vet-receipts/${receipt.filename}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-[var(--interactive)] hover:underline truncate max-w-[180px]"
+                              title={receipt.original_name}
+                            >
+                              {receipt.original_name}
+                            </a>
+                            <button
+                              onClick={() => handleDeleteReceipt(r.id, receipt.id)}
+                              className="text-xs text-[var(--error-text)] hover:underline shrink-0"
+                              title="Delete receipt"
+                            >
+                              x
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -1035,6 +1216,15 @@ export default function HorseDetailPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Hidden file input for receipt uploads */}
+      <input
+        ref={receiptInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        onChange={handleReceiptUpload}
+        className="hidden"
+      />
     </div>
   );
 }

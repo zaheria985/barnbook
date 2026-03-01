@@ -84,7 +84,11 @@ export default function CalendarPage() {
   });
 
   const selectedEvents = selectedDate
-    ? events.filter((e) => e.start_date.split("T")[0] === selectedDate)
+    ? events.filter((e) => {
+        const start = e.start_date.split("T")[0];
+        const end = e.end_date ? e.end_date.split("T")[0] : start;
+        return start <= selectedDate && end >= selectedDate;
+      })
     : [];
 
   // Build ride score map for the grid

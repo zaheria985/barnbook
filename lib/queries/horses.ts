@@ -4,6 +4,11 @@ export interface Horse {
   id: string;
   name: string;
   weight_lbs: number | null;
+  breed: string | null;
+  color: string | null;
+  date_of_birth: string | null;
+  registration_number: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,7 +24,7 @@ const PER_HORSE_CATEGORIES = [
 
 export async function getHorses(): Promise<Horse[]> {
   const res = await pool.query(
-    `SELECT id, name, weight_lbs, created_at, updated_at
+    `SELECT id, name, weight_lbs, breed, color, date_of_birth, registration_number, photo_url, created_at, updated_at
      FROM horses
      ORDER BY name`
   );
@@ -28,7 +33,7 @@ export async function getHorses(): Promise<Horse[]> {
 
 export async function getHorse(id: string): Promise<Horse | null> {
   const res = await pool.query(
-    `SELECT id, name, weight_lbs, created_at, updated_at
+    `SELECT id, name, weight_lbs, breed, color, date_of_birth, registration_number, photo_url, created_at, updated_at
      FROM horses WHERE id = $1`,
     [id]
   );
@@ -38,12 +43,23 @@ export async function getHorse(id: string): Promise<Horse | null> {
 export async function createHorse(data: {
   name: string;
   weight_lbs?: number | null;
+  breed?: string | null;
+  color?: string | null;
+  date_of_birth?: string | null;
+  registration_number?: string | null;
 }): Promise<Horse> {
   const res = await pool.query(
-    `INSERT INTO horses (name, weight_lbs)
-     VALUES ($1, $2)
-     RETURNING id, name, weight_lbs, created_at, updated_at`,
-    [data.name, data.weight_lbs ?? null]
+    `INSERT INTO horses (name, weight_lbs, breed, color, date_of_birth, registration_number)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, name, weight_lbs, breed, color, date_of_birth, registration_number, photo_url, created_at, updated_at`,
+    [
+      data.name,
+      data.weight_lbs ?? null,
+      data.breed ?? null,
+      data.color ?? null,
+      data.date_of_birth ?? null,
+      data.registration_number ?? null,
+    ]
   );
   const horse = res.rows[0];
 
@@ -55,7 +71,15 @@ export async function createHorse(data: {
 
 export async function updateHorse(
   id: string,
-  data: { name?: string; weight_lbs?: number | null }
+  data: {
+    name?: string;
+    weight_lbs?: number | null;
+    breed?: string | null;
+    color?: string | null;
+    date_of_birth?: string | null;
+    registration_number?: string | null;
+    photo_url?: string | null;
+  }
 ): Promise<Horse | null> {
   const fields: string[] = [];
   const values: (string | number | null)[] = [];
@@ -69,6 +93,26 @@ export async function updateHorse(
     fields.push(`weight_lbs = $${idx++}`);
     values.push(data.weight_lbs);
   }
+  if (data.breed !== undefined) {
+    fields.push(`breed = $${idx++}`);
+    values.push(data.breed);
+  }
+  if (data.color !== undefined) {
+    fields.push(`color = $${idx++}`);
+    values.push(data.color);
+  }
+  if (data.date_of_birth !== undefined) {
+    fields.push(`date_of_birth = $${idx++}`);
+    values.push(data.date_of_birth);
+  }
+  if (data.registration_number !== undefined) {
+    fields.push(`registration_number = $${idx++}`);
+    values.push(data.registration_number);
+  }
+  if (data.photo_url !== undefined) {
+    fields.push(`photo_url = $${idx++}`);
+    values.push(data.photo_url);
+  }
 
   if (fields.length === 0) return null;
 
@@ -77,7 +121,7 @@ export async function updateHorse(
 
   const res = await pool.query(
     `UPDATE horses SET ${fields.join(", ")} WHERE id = $${idx}
-     RETURNING id, name, weight_lbs, created_at, updated_at`,
+     RETURNING id, name, weight_lbs, breed, color, date_of_birth, registration_number, photo_url, created_at, updated_at`,
     values
   );
   const horse = res.rows[0];
