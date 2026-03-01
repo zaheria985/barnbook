@@ -1,9 +1,9 @@
 # Barnbook Feature Specification
 
 **Project:** Barnbook — Self-hosted equestrian management app
-**Version:** 1.0
-**Status:** Draft
-**Date:** 2026-02-28
+**Version:** 1.1
+**Status:** Current — all future scope items implemented as of 2026-03-01
+**Date:** 2026-02-28 (updated 2026-03-01)
 
 ---
 
@@ -146,12 +146,14 @@ Horse Management handles CRUD operations for horses in the barn. Each horse has 
 
 ### Future Scope
 
-- **Vet records** — upload and store veterinary records per horse, including visit date, provider, and notes
-- **Visit receipts** — attach receipt images or PDFs to vet visits
-- **Vaccine history** — track vaccinations with dates, next-due reminders, and provider info
-- **Farrier records** — log farrier visits by date with notes on findings
-- **Horse profile photos and detailed attributes** — profile image, breed, age, color, registration info
-- **Horse profile page** — dedicated page per horse showing all associated data
+All items implemented:
+
+- ~~**Vet records** — upload and store veterinary records per horse, including visit date, provider, and notes~~ *(implemented: migration 022, `lib/queries/vet-records.ts`, API routes, UI on horse detail page)*
+- ~~**Visit receipts** — attach receipt images or PDFs to vet visits~~ *(implemented: migration 025, `lib/queries/vet-receipts.ts`, file upload API, receipts per vet record)*
+- ~~**Vaccine history** — track vaccinations with dates, next-due reminders, and provider info~~ *(implemented: migration 023, `lib/queries/vaccine-records.ts`, API routes, overdue badges)*
+- ~~**Farrier records** — log farrier visits by date with notes on findings~~ *(implemented: migration 024, `lib/queries/farrier-records.ts`, API routes, service type badges)*
+- ~~**Horse profile photos and detailed attributes** — profile image, breed, age, color, registration info~~ *(implemented: migration 026, photo upload API, HorsesSection settings UI, detail page header)*
+- ~~**Horse profile page** — dedicated page per horse showing all associated data~~ *(implemented: enhanced `app/horses/[id]/page.tsx` with photo, attributes, vet/vaccine/farrier records, receipts)*
 
 ### Data Model
 
@@ -211,10 +213,12 @@ The Calendar & Events system manages equestrian events (shows, vet visits, farri
 
 ### Future Scope
 
-- **Clinic event type** — add `clinic` to the event type enum
-- **Recurring events** — auto-generate event series on a schedule
-- **Event attachments** — file/image uploads on events
-- **Multi-day event rendering** — display events spanning multiple calendar days
+All items implemented:
+
+- ~~**Clinic event type** — add `clinic` to the event type enum~~ *(implemented: added to all label/badge/color/type maps across 8 files)*
+- ~~**Recurring events** — auto-generate event series on a schedule~~ *(implemented: migration 027, recurrence fields in events.ts, generateRecurringInstances, repeat dropdown in event form, recurring icon badges)*
+- ~~**Event attachments** — file/image uploads on events~~ *(implemented: migration 028, `lib/queries/event-attachments.ts`, upload/delete API, attachments section on event detail page)*
+- ~~**Multi-day event rendering** — display events spanning multiple calendar days~~ *(implemented: updated getEvents query, DayCell span indicators, MonthGrid event distribution, calendar page day-range filter)*
 
 ### Data Model
 
@@ -362,7 +366,9 @@ The Budget System tracks equestrian expenses organized by categories and optiona
 
 ### Future Scope
 
-- **Income trends visualization** — graphs on the income page showing actual income over time (month-over-month trends)
+All items implemented:
+
+- ~~**Income trends visualization** — graphs on the income page showing actual income over time (month-over-month trends)~~ *(implemented: `IncomeTrendsChart` component, `/api/income/trends` endpoint, 12-month stacked bar chart)*
 
 ### Data Model
 
@@ -558,7 +564,9 @@ Income & Sales tracks projected and actual income alongside one-off sales (e.g.,
 
 ### Future Scope
 
-- **Income trends visualization** — graphs on the income page showing actual income over time (month-over-month trends)
+All items implemented:
+
+- ~~**Income trends visualization** — graphs on the income page showing actual income over time (month-over-month trends)~~ *(implemented: same as Feature 4 — shared `IncomeTrendsChart` component on income page)*
 
 ### Data Model
 
@@ -804,7 +812,7 @@ Unique constraint on `(date, start_time)`.
 - **Auto-tuning** runs after each footing feedback submission if enabled, requires ≥5 feedbacks and ≥24h since last tune; adjusts drying rate ±5 hours/inch (clamped 20–120) based on ≥60% directional consensus
 - **Prediction snapshots** store score + forecast data per date; enable accuracy tracking and footing feedback comparison; pruned after 90 days
 - **OpenWeatherMap caching** — forecast has 15-min TTL, timemachine (historical rain) has 24-hr TTL
-- **Known gap: same-day rain** — `getRecentRain()` currently only fetches the previous 2 days from the timemachine API; today's past rainfall is not included in the moisture simulation, only the current precipitation rate. Heavy morning rain won't register in afternoon footing checks. See `high-eq-6xp`.
+- ~~**Known gap: same-day rain** — `getRecentRain()` currently only fetches the previous 2 days from the timemachine API; today's past rainfall is not included in the moisture simulation, only the current precipitation rate. Heavy morning rain won't register in afternoon footing checks. See `high-eq-6xp`.~~ *(Fixed: changed loop from `daysAgo >= 1` to `daysAgo >= 0` in `lib/openweathermap.ts` to include today's past rain hours)*
 
 ---
 
