@@ -796,7 +796,7 @@ export default function HorseDetailPage() {
     <div className="pb-20 md:pb-8">
       {/* Back link */}
       <Link
-        href="/settings?tab=barn"
+        href="/horses"
         className="mb-4 inline-block text-sm text-[var(--interactive)] hover:underline"
       >
         &larr; Back to Barn Settings

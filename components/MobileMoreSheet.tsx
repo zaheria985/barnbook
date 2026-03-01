@@ -5,9 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconSliders,
+  IconClipboard,
   IconX,
 } from "./icons";
 import ThemeToggle from "./ThemeToggle";
+
+const quickLinks = [
+  { href: "/horses", label: "Horses", icon: IconClipboard },
+];
 
 const settingsItems = [
   { href: "/settings?tab=account", label: "Account", icon: IconSliders },
@@ -53,7 +58,7 @@ export default function MobileMoreSheet({
       >
         {/* Handle bar */}
         <div className="mb-4 flex items-center justify-between px-4">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Settings</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">More</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -62,7 +67,26 @@ export default function MobileMoreSheet({
           </button>
         </div>
 
-        {/* Navigation grid */}
+        {/* Quick links */}
+        <div className="grid grid-cols-4 gap-1 px-4 mb-4">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition-colors text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            >
+              <item.icon size={22} />
+              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mb-4 flex items-center px-4">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Settings</h2>
+        </div>
+
+        {/* Settings grid */}
         <div className="grid grid-cols-4 gap-1 px-4">
           {settingsItems.map((item) => {
             const active = pathname === "/settings";

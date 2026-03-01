@@ -14,6 +14,7 @@ import {
   IconStore,
   IconLogOut,
   IconReceipt,
+  IconClipboard,
 } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -25,6 +26,7 @@ const mainItems = [
   { href: "/budget/vendors", label: "Vendors", icon: IconStore },
   { href: "/budget/pending", label: "Pending", icon: IconInbox },
   { href: "/rides", label: "Rides", icon: IconHorse },
+  { href: "/horses", label: "Horses", icon: IconClipboard },
   { href: "/calendar", label: "Calendar", icon: IconCalendar },
 ];
 
