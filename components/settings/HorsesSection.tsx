@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Modal from "@/components/ui/Modal";
 import type { Horse } from "@/lib/queries/horses";
 
@@ -217,9 +218,12 @@ export default function HorsesSection() {
                   />
                 )}
                 <div>
-                  <span className="font-medium text-[var(--text-primary)]">
+                  <Link
+                    href={`/horses/${horse.id}`}
+                    className="font-medium text-[var(--interactive)] hover:underline"
+                  >
                     {horse.name}
-                  </span>
+                  </Link>
                   {(horse.breed || horse.color) && (
                     <span className="ml-2 text-sm text-[var(--text-muted)]">
                       {[horse.breed, horse.color].filter(Boolean).join(" - ")}
