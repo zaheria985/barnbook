@@ -202,15 +202,6 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  // First check if this is a parent recurring event — delete future instances too
-  const event = await getEvent(id);
-  if (event?.recurrence_rule) {
-    const today = new Date().toISOString().split("T")[0];
-    await pool.query(
-      `DELETE FROM events WHERE recurrence_parent_id = $1 AND start_date >= $2`,
-      [id, today]
-    );
-  }
   const res = await pool.query(`DELETE FROM events WHERE id = $1`, [id]);
   return (res.rowCount ?? 0) > 0;
 }
