@@ -5,7 +5,7 @@ import { updateMapping, deleteMapping } from "@/lib/queries/vendor-mappings";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,8 +13,9 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
-    const mapping = await updateMapping(params.id, {
+    const mapping = await updateMapping(id, {
       vendor_pattern: body.vendor_pattern?.trim(),
       category_id: body.category_id,
       sub_item_id: body.sub_item_id,
@@ -32,7 +33,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -40,7 +41,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteMapping(params.id);
+    const { id } = await params;
+    const deleted = await deleteMapping(id);
     if (!deleted) {
       return NextResponse.json({ error: "Mapping not found" }, { status: 404 });
     }

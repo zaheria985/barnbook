@@ -8,7 +8,7 @@ import {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -16,6 +16,7 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
     const data: { name?: string; sort_order?: number } = {};
 
@@ -32,7 +33,7 @@ export async function PUT(
       data.sort_order = Number(body.sort_order);
     }
 
-    const category = await updateIncomeCategory(params.id, data);
+    const category = await updateIncomeCategory(id, data);
     if (!category) {
       return NextResponse.json(
         { error: "Income category not found" },
@@ -52,7 +53,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -60,7 +61,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteIncomeCategory(params.id);
+    const { id } = await params;
+    const deleted = await deleteIncomeCategory(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "Income category not found" },

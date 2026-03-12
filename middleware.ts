@@ -14,5 +14,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/budget/:path*", "/rides/:path*", "/calendar/:path*", "/settings/:path*"],
+  matcher: ["/((?!auth|api/auth|api/email/ingest|_next/static|_next/image|favicon.ico).*)"],
 };

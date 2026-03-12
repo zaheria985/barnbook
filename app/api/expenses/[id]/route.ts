@@ -15,7 +15,7 @@ async function getExpenseMonth(id: string): Promise<string | null> {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -23,7 +23,8 @@ export async function PUT(
   }
 
   try {
-    const yearMonth = await getExpenseMonth(params.id);
+    const { id } = await params;
+    const yearMonth = await getExpenseMonth(id);
     if (!yearMonth) {
       return NextResponse.json(
         { error: "Expense not found" },
@@ -40,7 +41,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const expense = await updateExpense(params.id, body);
+    const expense = await updateExpense(id, body);
     if (!expense) {
       return NextResponse.json(
         { error: "Expense not found" },
@@ -60,7 +61,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -68,7 +69,8 @@ export async function DELETE(
   }
 
   try {
-    const yearMonth = await getExpenseMonth(params.id);
+    const { id } = await params;
+    const yearMonth = await getExpenseMonth(id);
     if (!yearMonth) {
       return NextResponse.json(
         { error: "Expense not found" },
@@ -84,7 +86,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await deleteExpense(params.id);
+    const deleted = await deleteExpense(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "Expense not found" },

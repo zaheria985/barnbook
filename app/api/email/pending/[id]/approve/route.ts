@@ -5,7 +5,7 @@ import pool from "@/lib/db";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,6 +13,7 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
 
     if (!body.category_id) {
@@ -27,7 +28,7 @@ export async function PUT(
        SET category_id = $1, sub_item_id = $2, updated_at = now()
        WHERE id = $3
        RETURNING id, amount, vendor, date, category_id`,
-      [body.category_id, body.sub_item_id || null, params.id]
+      [body.category_id, body.sub_item_id || null, id]
     );
 
     if (res.rows.length === 0) {

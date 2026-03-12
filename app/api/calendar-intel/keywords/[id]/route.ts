@@ -5,7 +5,7 @@ import { deleteKeyword } from "@/lib/queries/detection-keywords";
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,7 +13,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteKeyword(params.id);
+    const { id } = await params;
+    const deleted = await deleteKeyword(id);
     if (!deleted) {
       return NextResponse.json({ error: "Keyword not found" }, { status: 404 });
     }

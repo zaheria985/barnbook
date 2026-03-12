@@ -291,7 +291,7 @@ function checkDaytimeRain(
     const slotLabel = `${formatTime12h(slot.start_time)}-${formatTime12h(slot.end_time)}`;
 
     const slotHourly = daytimeHourly.filter((h) => {
-      const hour = new Date(h.hour).getHours();
+      const hour = getLocalHour(h.hour, tzOffset);
       return hour >= startHour && hour < endHour;
     });
 

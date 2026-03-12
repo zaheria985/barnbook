@@ -5,7 +5,7 @@ import { toggleChecklistItem } from "@/lib/queries/event-checklists";
 
 export async function PUT(
   _request: NextRequest,
-  { params }: { params: { id: string; itemId: string } }
+  { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,7 +13,8 @@ export async function PUT(
   }
 
   try {
-    const item = await toggleChecklistItem(params.itemId);
+    const { itemId } = await params;
+    const item = await toggleChecklistItem(itemId);
     if (!item) {
       return NextResponse.json({ error: "Checklist item not found" }, { status: 404 });
     }

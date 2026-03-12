@@ -5,7 +5,7 @@ import { updateSlot, deleteSlot } from "@/lib/queries/ride-schedule";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,8 +13,9 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
-    const slot = await updateSlot(params.id, {
+    const slot = await updateSlot(id, {
       day_of_week: body.day_of_week !== undefined ? Number(body.day_of_week) : undefined,
       start_time: body.start_time,
       end_time: body.end_time,
@@ -32,7 +33,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -40,7 +41,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteSlot(params.id);
+    const { id } = await params;
+    const deleted = await deleteSlot(id);
     if (!deleted) {
       return NextResponse.json({ error: "Slot not found" }, { status: 404 });
     }

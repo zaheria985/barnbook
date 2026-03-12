@@ -15,7 +15,7 @@ async function getSaleMonth(id: string): Promise<string | null> {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -23,7 +23,8 @@ export async function PUT(
   }
 
   try {
-    const yearMonth = await getSaleMonth(params.id);
+    const { id } = await params;
+    const yearMonth = await getSaleMonth(id);
     if (!yearMonth) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
@@ -37,7 +38,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const sale = await updateSale(params.id, body);
+    const sale = await updateSale(id, body);
     if (!sale) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
@@ -54,7 +55,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -62,7 +63,8 @@ export async function DELETE(
   }
 
   try {
-    const yearMonth = await getSaleMonth(params.id);
+    const { id } = await params;
+    const yearMonth = await getSaleMonth(id);
     if (!yearMonth) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
@@ -75,7 +77,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await deleteSale(params.id);
+    const deleted = await deleteSale(id);
     if (!deleted) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }

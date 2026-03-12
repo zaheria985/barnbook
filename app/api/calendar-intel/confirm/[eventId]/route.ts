@@ -5,7 +5,7 @@ import { updateEvent } from "@/lib/queries/events";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,10 +13,11 @@ export async function POST(
   }
 
   try {
+    const { eventId } = await params;
     const body = await request.json();
 
     // Confirm means marking as confirmed and updating event_type if provided
-    const event = await updateEvent(params.eventId, {
+    const event = await updateEvent(eventId, {
       event_type: body.event_type || undefined,
       notes: body.notes || undefined,
       is_confirmed: true,

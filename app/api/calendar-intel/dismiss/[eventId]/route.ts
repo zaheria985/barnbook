@@ -5,7 +5,7 @@ import { deleteEvent } from "@/lib/queries/events";
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,7 +13,8 @@ export async function POST(
   }
 
   try {
-    const deleted = await deleteEvent(params.eventId);
+    const { eventId } = await params;
+    const deleted = await deleteEvent(eventId);
     if (!deleted) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

@@ -13,7 +13,7 @@ import {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -21,7 +21,8 @@ export async function GET(
   }
 
   try {
-    const template = await getTemplate(params.id);
+    const { id } = await params;
+    const template = await getTemplate(id);
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
@@ -34,7 +35,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -42,11 +43,12 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Update template metadata
     if (body.name !== undefined || body.event_type !== undefined) {
-      await updateTemplate(params.id, {
+      await updateTemplate(id, {
         name: body.name?.trim(),
         event_type: body.event_type?.trim(),
       });
@@ -55,7 +57,7 @@ export async function PUT(
     // Sync items if provided
     if (body.items) {
       // Delete existing items and re-create
-      const existing = await getTemplate(params.id);
+      const existing = await getTemplate(id);
       if (existing) {
         for (const item of existing.items) {
           await deleteTemplateItem(item.id);
@@ -63,7 +65,7 @@ export async function PUT(
       }
       for (const item of body.items) {
         await addTemplateItem({
-          template_id: params.id,
+          template_id: id,
           title: item.title,
           days_before_event: item.days_before_event,
           sort_order: item.sort_order,
@@ -73,7 +75,7 @@ export async function PUT(
 
     // Sync reminders if provided
     if (body.reminders) {
-      const existing = await getTemplate(params.id);
+      const existing = await getTemplate(id);
       if (existing) {
         for (const reminder of existing.reminders) {
           await deleteTemplateReminder(reminder.id);
@@ -81,13 +83,13 @@ export async function PUT(
       }
       for (const reminder of body.reminders) {
         await addTemplateReminder({
-          template_id: params.id,
+          template_id: id,
           days_before: reminder.days_before,
         });
       }
     }
 
-    const updated = await getTemplate(params.id);
+    const updated = await getTemplate(id);
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
@@ -100,7 +102,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -108,7 +110,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteTemplate(params.id);
+    const { id } = await params;
+    const deleted = await deleteTemplate(id);
     if (!deleted) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }

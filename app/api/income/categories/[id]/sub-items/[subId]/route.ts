@@ -5,7 +5,7 @@ import { updateIncomeSubItem, deleteIncomeSubItem } from "@/lib/queries/income";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; subId: string } }
+  { params }: { params: Promise<{ id: string; subId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,6 +13,7 @@ export async function PUT(
   }
 
   try {
+    const { subId } = await params;
     const body = await request.json();
     const data: { label?: string; sort_order?: number } = {};
 
@@ -29,7 +30,7 @@ export async function PUT(
       data.sort_order = Number(body.sort_order);
     }
 
-    const subItem = await updateIncomeSubItem(params.subId, data);
+    const subItem = await updateIncomeSubItem(subId, data);
     if (!subItem) {
       return NextResponse.json(
         { error: "Sub-item not found" },
@@ -49,7 +50,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string; subId: string } }
+  { params }: { params: Promise<{ id: string; subId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -57,7 +58,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteIncomeSubItem(params.subId);
+    const { subId } = await params;
+    const deleted = await deleteIncomeSubItem(subId);
     if (!deleted) {
       return NextResponse.json(
         { error: "Sub-item not found" },

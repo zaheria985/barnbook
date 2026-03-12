@@ -4,6 +4,22 @@
 import { createDAVClient, DAVCalendar, DAVObject } from "tsdav";
 import { toNoonUTC } from "@/lib/caldav";
 
+function escapeIcs(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export interface RadicaleCollection {
   id: string;
   name: string;
@@ -93,7 +109,7 @@ export async function createCollection(name: string): Promise<string> {
 <C:mkcalendar xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:set>
     <D:prop>
-      <D:displayname>${name}</D:displayname>
+      <D:displayname>${escapeXml(name)}</D:displayname>
       <C:supported-calendar-component-set>
         <C:comp name="VTODO"/>
       </C:supported-calendar-component-set>
@@ -132,7 +148,8 @@ export async function writeReminder(
 
   const uid = `barnbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@barnbook`;
 
-  const dueDate = reminder.due ? new Date(toNoonUTC(reminder.due)) : null;
+  const dueStr = reminder.due ? String(reminder.due) : null;
+  const dueDate = dueStr ? new Date(dueStr.includes("T") ? dueStr : toNoonUTC(dueStr)) : null;
 
   const vcalendar = [
     "BEGIN:VCALENDAR",
@@ -142,8 +159,8 @@ export async function writeReminder(
     `UID:${uid}`,
     `DTSTAMP:${formatICalDate(new Date())}`,
     dueDate ? `DUE:${formatICalDate(dueDate)}` : "",
-    `SUMMARY:${reminder.title}`,
-    reminder.description ? `DESCRIPTION:${reminder.description}` : "",
+    `SUMMARY:${escapeIcs(reminder.title)}`,
+    reminder.description ? `DESCRIPTION:${escapeIcs(reminder.description)}` : "",
     "STATUS:NEEDS-ACTION",
     "END:VTODO",
     "END:VCALENDAR",

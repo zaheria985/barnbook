@@ -5,7 +5,7 @@ import { updateRide, deleteRide } from "@/lib/queries/rides";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,8 +13,9 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
-    const ride = await updateRide(params.id, body);
+    const ride = await updateRide(id, body);
     if (!ride) {
       return NextResponse.json(
         { error: "Ride not found" },
@@ -33,7 +34,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -41,7 +42,8 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteRide(params.id);
+    const { id } = await params;
+    const deleted = await deleteRide(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "Ride not found" },

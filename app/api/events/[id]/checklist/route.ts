@@ -5,7 +5,7 @@ import { getChecklist, applyTemplate } from "@/lib/queries/event-checklists";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -13,7 +13,8 @@ export async function GET(
   }
 
   try {
-    const items = await getChecklist(params.id);
+    const { id } = await params;
+    const items = await getChecklist(id);
     return NextResponse.json(items);
   } catch (error) {
     console.error("Failed to fetch checklist:", error);
@@ -23,7 +24,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -31,12 +32,13 @@ export async function POST(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
     if (!body.template_id) {
       return NextResponse.json({ error: "template_id is required" }, { status: 400 });
     }
 
-    const items = await applyTemplate(params.id, body.template_id);
+    const items = await applyTemplate(id, body.template_id);
     return NextResponse.json(items, { status: 201 });
   } catch (error) {
     console.error("Failed to apply template:", error);

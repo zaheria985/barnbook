@@ -33,6 +33,14 @@ export function toNoonUTC(val: string | Date): string {
   return `${dateOnly}T12:00:00.000Z`;
 }
 
+function escapeIcs(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
 export function isConfigured(): boolean {
   return !!(process.env.ICLOUD_APPLE_ID && process.env.ICLOUD_APP_PASSWORD);
 }
@@ -262,8 +270,8 @@ export async function writeEvent(
     `DTSTAMP:${formatICalDate(new Date())}`,
     `DTSTART:${formatICalDate(event.start)}`,
     `DTEND:${formatICalDate(event.end)}`,
-    `SUMMARY:${event.title}`,
-    event.description ? `DESCRIPTION:${event.description}` : "",
+    `SUMMARY:${escapeIcs(event.title)}`,
+    event.description ? `DESCRIPTION:${escapeIcs(event.description)}` : "",
     "END:VEVENT",
     "END:VCALENDAR",
   ]
@@ -320,7 +328,8 @@ export async function writeReminder(
 
   const uid = `barnbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@barnbook`;
 
-  const dueDate = reminder.due ? new Date(toNoonUTC(reminder.due)) : null;
+  const dueStr = reminder.due ? String(reminder.due) : null;
+  const dueDate = dueStr ? new Date(dueStr.includes("T") ? dueStr : toNoonUTC(dueStr)) : null;
 
   const vcalendar = [
     "BEGIN:VCALENDAR",
@@ -330,8 +339,8 @@ export async function writeReminder(
     `UID:${uid}`,
     `DTSTAMP:${formatICalDate(new Date())}`,
     dueDate ? `DUE:${formatICalDate(dueDate)}` : "",
-    `SUMMARY:${reminder.title}`,
-    reminder.description ? `DESCRIPTION:${reminder.description}` : "",
+    `SUMMARY:${escapeIcs(reminder.title)}`,
+    reminder.description ? `DESCRIPTION:${escapeIcs(reminder.description)}` : "",
     "STATUS:NEEDS-ACTION",
     "END:VTODO",
     "END:VCALENDAR",
