@@ -61,9 +61,19 @@ export async function getFeedbackForDate(date: string): Promise<FootingFeedback 
   return res.rows.length > 0 ? normalizeRow(res.rows[0]) : null;
 }
 
+// Only feedback on/after the current location's era counts toward tuning and
+// accuracy. location_changed_at is stamped when the barn location moves; older
+// rows describe a different arena and would mis-tune the drying rate.
+const CURRENT_ERA_FILTER = `date >= COALESCE(
+  (SELECT location_changed_at::date FROM weather_settings LIMIT 1),
+  '-infinity'::date
+)`;
+
 export async function getRecentFeedback(limit = 10): Promise<FootingFeedback[]> {
   const res = await pool.query(
-    `SELECT * FROM footing_feedback ORDER BY date DESC LIMIT $1`,
+    `SELECT * FROM footing_feedback
+     WHERE ${CURRENT_ERA_FILTER}
+     ORDER BY date DESC LIMIT $1`,
     [limit]
   );
   return res.rows.map(normalizeRow);
@@ -73,6 +83,7 @@ export async function getAccuracyStats(): Promise<AccuracyStats> {
   const res = await pool.query(
     `SELECT actual_footing, predicted_score FROM footing_feedback
      WHERE predicted_score IS NOT NULL
+       AND ${CURRENT_ERA_FILTER}
      ORDER BY date DESC`
   );
 

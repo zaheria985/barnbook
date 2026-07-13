@@ -234,6 +234,7 @@ CREATE TABLE IF NOT EXISTS weather_settings (
   footing_dry_hours_per_inch INTEGER NOT NULL DEFAULT 60,
   auto_tune_drying_rate BOOLEAN NOT NULL DEFAULT true,
   last_tuned_at TIMESTAMPTZ,
+  location_changed_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
