@@ -18,27 +18,47 @@ interface Category {
   name: string;
 }
 
+interface FailedIngest {
+  id: string;
+  subject: string | null;
+  reason: string;
+  created_at: string;
+}
+
 export default function PendingExpensesPage() {
   const [pending, setPending] = useState<PendingExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [failed, setFailed] = useState<FailedIngest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
-      const [pendingRes, categoriesRes] = await Promise.all([
+      const [pendingRes, categoriesRes, failedRes] = await Promise.all([
         fetch("/api/email/pending"),
         fetch("/api/budget/categories"),
+        fetch("/api/email/failed"),
       ]);
       if (pendingRes.ok) setPending(await pendingRes.json());
       if (categoriesRes.ok) setCategories(await categoriesRes.json());
+      if (failedRes.ok) setFailed(await failedRes.json());
     } catch {
       setError("Failed to load pending expenses");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  async function handleDismissFailed(id: string) {
+    try {
+      const res = await fetch(`/api/email/failed/${id}/resolve`, { method: "PUT" });
+      if (!res.ok) throw new Error("Failed to dismiss");
+      setFailed((prev) => prev.filter((f) => f.id !== id));
+    } catch {
+      setError("Failed to dismiss item");
+    }
+  }
 
   useEffect(() => {
     fetchData();
@@ -109,6 +129,41 @@ export default function PendingExpensesPage() {
       {success && (
         <div className="mb-4 rounded-lg border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-sm text-[var(--success-text)]">
           {success}
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--error-text)]">
+            Failed to import ({failed.length})
+          </h2>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            These emails could not be turned into expenses. Review the source email and enter them manually, then dismiss.
+          </p>
+          <div className="space-y-2">
+            {failed.map((f) => (
+              <div
+                key={f.id}
+                className="flex items-start justify-between gap-3 rounded-xl border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    {f.subject || "(no subject)"}
+                  </p>
+                  <p className="text-xs text-[var(--error-text)]">{f.reason}</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {new Date(f.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDismissFailed(f.id)}
+                  className="shrink-0 text-xs font-medium text-[var(--text-muted)] underline hover:text-[var(--text-primary)]"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

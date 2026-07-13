@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Horse } from "@/lib/queries/horses";
+import { localToday } from "@/lib/dates";
 
 // Client-side calorie/mcal preview (mirrors server logic)
 const RIDER_GAIT_RATES = { walk: 3.5, trot: 5.5, canter: 8.0 };
@@ -58,7 +59,7 @@ export default function RideEntryPage() {
 
   // Form state
   const [horseId, setHorseId] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => localToday());
   const [totalMinutes, setTotalMinutes] = useState("");
   const [walkMinutes, setWalkMinutes] = useState("");
   const [trotMinutes, setTrotMinutes] = useState("");

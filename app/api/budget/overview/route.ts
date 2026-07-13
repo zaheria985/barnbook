@@ -6,7 +6,8 @@ import {
   getSavingsBalance,
 } from "@/lib/queries/budget-overview";
 import { getMonthlyIncome } from "@/lib/queries/income";
-import { hasDefaults } from "@/lib/queries/monthly-budgets";
+import { hasDefaults, copyBudgetsFromDefaults } from "@/lib/queries/monthly-budgets";
+import { localYearMonth } from "@/lib/dates";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -23,6 +24,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Auto-initialize the current or a future month from budget defaults the
+    // first time it's viewed. copyBudgetsFromDefaults is a no-op when the month
+    // already has rows, so this is idempotent. Past months are left untouched so
+    // we never back-fill history with today's defaults.
+    if (month >= localYearMonth()) {
+      await copyBudgetsFromDefaults(month);
+    }
+
     const [overview, savings, incomeRows, hasDefaultBudgets] = await Promise.all([
       getBudgetOverview(month),
       getSavingsBalance(),

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import { localToday } from "@/lib/dates";
 
 interface RowData {
   id: string;
@@ -61,7 +62,7 @@ function parseRows(text: string, categories: BudgetCategory[]): RowData[] {
   const lines = normalized.trim().split("\n").filter((line) => line.trim());
   if (lines.length === 0) return [];
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
 
   return lines.map((line) => {
     const parts = line.split(" / ").map((p) => p.trim());

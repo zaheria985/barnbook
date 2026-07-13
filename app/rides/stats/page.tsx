@@ -16,6 +16,7 @@ import {
   Legend,
 } from "recharts";
 import type { RideStats } from "@/lib/queries/rides";
+import { localToday } from "@/lib/dates";
 
 const GAIT_COLORS = {
   Walk: "var(--gait-walk)",
@@ -25,7 +26,7 @@ const GAIT_COLORS = {
 
 export default function RideStatsPage() {
   const [period, setPeriod] = useState<"week" | "month">("month");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => localToday());
   const [stats, setStats] = useState<RideStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

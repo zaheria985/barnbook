@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import BulkPasteEntry from "@/components/budget/BulkPasteEntry";
 import TagPicker from "@/components/ui/TagPicker";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import { localToday } from "@/lib/dates";
 
 interface RowData {
   id: string;
@@ -135,7 +136,7 @@ function QuickAddForm({ categories }: { categories: BudgetCategory[] }) {
   const amountRef = useRef<HTMLInputElement>(null);
 
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => localToday());
   const [categoryId, setCategoryId] = useState("");
   const [subItemId, setSubItemId] = useState("");
   const [vendorTags, setVendorTags] = useState<VendorTag[]>([]);

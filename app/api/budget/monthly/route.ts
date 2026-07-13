@@ -5,6 +5,7 @@ import {
   getMonthlyBudgets,
   setMonthlyBudget,
   copyBudgetsFromDefaults,
+  isMonthClosed,
 } from "@/lib/queries/monthly-budgets";
 
 export async function GET(request: NextRequest) {
@@ -61,6 +62,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "yearMonth must be YYYY-MM format" },
         { status: 400 }
+      );
+    }
+
+    if (await isMonthClosed(yearMonth)) {
+      return NextResponse.json(
+        { error: "This month is closed. Reopen it to edit budgets." },
+        { status: 403 }
       );
     }
 
