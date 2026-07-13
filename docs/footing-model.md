@@ -26,6 +26,13 @@ for each hour (oldest to newest):
     moisture = max(moisture, 0)
 ```
 
+> **Per-hour drying (update):** the lookback simulation now evaporates each
+> historical hour using that hour's own conditions (temperature, cloud cover,
+> wind from the timemachine response) rather than a single rate derived from
+> today's forecast. A cold, cloudy night dries far slower than a warm, sunny
+> afternoon; using one blanket rate systematically mis-estimated footing. Hours
+> lacking their own conditions fall back to today's forecast rate.
+
 ### Evaporation Formula
 
 ```

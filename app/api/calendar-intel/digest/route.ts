@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import pool from "@/lib/db";
 import { getSuggestedWindows, getIcloudSettings } from "@/lib/queries/icloud-sync";
 import * as caldav from "@/lib/caldav";
+import { localToday } from "@/lib/dates";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -12,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     const sevenDaysOut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0];

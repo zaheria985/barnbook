@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/queries/events";
 import type { SuggestedWindow } from "@/lib/queries/icloud-sync";
+import { localToday } from "@/lib/dates";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   show: "Show",
@@ -171,7 +172,7 @@ export default function WeeklyDigestPage() {
     return d.toISOString().split("T")[0];
   }, []);
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = useMemo(() => localToday(), []);
 
   // Build day buckets for the 7-day timeline
   const { timelineDays, comingUpEvents } = useMemo(() => {

@@ -1,4 +1,5 @@
 import pool from "@/lib/db";
+import { localToday } from "@/lib/dates";
 
 export type RecurrenceRule = "weekly" | "biweekly" | "monthly" | "yearly";
 
@@ -206,23 +207,43 @@ export async function deleteEvent(id: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
-function addInterval(dateStr: string, rule: RecurrenceRule): string {
+function daysInMonth(year: number, month0: number): number {
+  return new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
+}
+
+function ymd(year: number, month0: number, day: number): string {
+  return `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+// Advance a date by one recurrence interval. For monthly/yearly, `anchorDay`
+// (the original series day-of-month) is clamped to the target month's length so
+// a Jan 31 series lands on Feb 28 and back on Mar 31 — never rolling over to
+// Mar 3, and never permanently "sticking" at 28.
+function addInterval(dateStr: string, rule: RecurrenceRule, anchorDay?: number): string {
   const d = new Date(dateStr + "T12:00:00Z");
   switch (rule) {
     case "weekly":
       d.setUTCDate(d.getUTCDate() + 7);
-      break;
+      return d.toISOString().split("T")[0];
     case "biweekly":
       d.setUTCDate(d.getUTCDate() + 14);
-      break;
-    case "monthly":
-      d.setUTCMonth(d.getUTCMonth() + 1);
-      break;
-    case "yearly":
-      d.setUTCFullYear(d.getUTCFullYear() + 1);
-      break;
+      return d.toISOString().split("T")[0];
+    case "monthly": {
+      const total = d.getUTCFullYear() * 12 + d.getUTCMonth() + 1;
+      const year = Math.floor(total / 12);
+      const month0 = total % 12;
+      const day = Math.min(anchorDay ?? d.getUTCDate(), daysInMonth(year, month0));
+      return ymd(year, month0, day);
+    }
+    case "yearly": {
+      const year = d.getUTCFullYear() + 1;
+      const month0 = d.getUTCMonth();
+      const day = Math.min(anchorDay ?? d.getUTCDate(), daysInMonth(year, month0));
+      return ymd(year, month0, day);
+    }
+    default:
+      return dateStr;
   }
-  return d.toISOString().split("T")[0];
 }
 
 export async function generateRecurringInstances(
@@ -241,8 +262,11 @@ export async function generateRecurringInstances(
         return d.toISOString().split("T")[0];
       })();
 
+  const startDateStr = String(parentEvent.start_date).split("T")[0];
+  const anchorDay = parseInt(startDateStr.split("-")[2], 10);
+
   const instances: Event[] = [];
-  let currentDate = addInterval(String(parentEvent.start_date).split("T")[0], rule);
+  let currentDate = addInterval(startDateStr, rule, anchorDay);
 
   // Calculate duration offset if parent has end_date
   let durationDays = 0;
@@ -275,14 +299,84 @@ export async function generateRecurringInstances(
       is_recurring_instance: true,
     });
     instances.push(instance);
-    currentDate = addInterval(currentDate, rule);
+    currentDate = addInterval(currentDate, rule, anchorDay);
   }
 
   return instances;
 }
 
+/**
+ * Extend every recurring series so instances exist through ~3 months from today.
+ * Recurring instances are materialized to a fixed horizon at creation time and
+ * were never regenerated, so a weekly series would silently vanish after ~3
+ * months. Call this from the periodic sync to keep series topped up.
+ */
+export async function topUpRecurringInstances(): Promise<number> {
+  const horizonDate = new Date(localToday() + "T12:00:00Z");
+  horizonDate.setUTCMonth(horizonDate.getUTCMonth() + 3);
+  const horizon = horizonDate.toISOString().split("T")[0];
+
+  const parents = await pool.query(
+    `SELECT ${EVENT_COLUMNS} FROM events
+     WHERE recurrence_rule IS NOT NULL AND recurrence_parent_id IS NULL`
+  );
+
+  let created = 0;
+  for (const parent of parents.rows as Event[]) {
+    const rule = parent.recurrence_rule;
+    if (!rule) continue;
+
+    const startDateStr = String(parent.start_date).split("T")[0];
+    const anchorDay = parseInt(startDateStr.split("-")[2], 10);
+
+    // Resume from the latest materialized instance (or the parent itself).
+    const latest = await pool.query(
+      `SELECT MAX(start_date) AS d FROM events WHERE recurrence_parent_id = $1`,
+      [parent.id]
+    );
+    const lastDate = latest.rows[0].d
+      ? String(latest.rows[0].d).split("T")[0]
+      : startDateStr;
+
+    let durationDays = 0;
+    if (parent.end_date) {
+      const startMs = new Date(startDateStr + "T12:00:00Z").getTime();
+      const endMs = new Date(String(parent.end_date).split("T")[0] + "T12:00:00Z").getTime();
+      durationDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+    }
+
+    let currentDate = addInterval(lastDate, rule, anchorDay);
+    while (currentDate <= horizon) {
+      let instanceEndDate: string | null = null;
+      if (durationDays > 0) {
+        const ed = new Date(currentDate + "T12:00:00Z");
+        ed.setUTCDate(ed.getUTCDate() + durationDays);
+        instanceEndDate = ed.toISOString().split("T")[0];
+      }
+      await createEvent({
+        title: parent.title,
+        event_type: parent.event_type,
+        start_date: currentDate,
+        end_date: instanceEndDate,
+        start_time: parent.start_time,
+        end_time: parent.end_time,
+        location: parent.location,
+        notes: parent.notes,
+        created_by: parent.created_by,
+        is_confirmed: parent.is_confirmed,
+        recurrence_parent_id: parent.id,
+        is_recurring_instance: true,
+      });
+      created++;
+      currentDate = addInterval(currentDate, rule, anchorDay);
+    }
+  }
+
+  return created;
+}
+
 export async function deleteFutureInstances(parentId: string): Promise<number> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
   const res = await pool.query(
     `DELETE FROM events WHERE recurrence_parent_id = $1 AND start_date >= $2`,
     [parentId, today]
@@ -294,7 +388,7 @@ export async function updateFutureInstances(
   parentId: string,
   data: UpdateEventData
 ): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
   const res = await pool.query(
     `SELECT id FROM events WHERE recurrence_parent_id = $1 AND start_date >= $2 ORDER BY start_date`,
     [parentId, today]
