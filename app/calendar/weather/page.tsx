@@ -107,8 +107,8 @@ export default function WeatherDashboardPage() {
         const yesterday = getYesterdayDate();
         const feedbackRes = await fetch(`/api/footing-feedback?date=${yesterday}`);
         if (feedbackRes.ok) {
-          const { feedback } = await feedbackRes.json();
-          if (!feedback) {
+          const { feedback, beforeEra } = await feedbackRes.json();
+          if (!feedback && !beforeEra) {
             const yesterdayScored = scored.find(
               (d) => d.date === yesterday
             );
@@ -148,10 +148,10 @@ export default function WeatherDashboardPage() {
         </h1>
         <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="mb-2 text-[var(--text-primary)] font-medium">
-            WeatherKit Not Configured
+            Weather Not Configured
           </p>
           <p className="mb-4 text-sm text-[var(--text-muted)]">
-            Set WEATHERKIT_* environment variables to enable weather integration.
+            Set the OPENWEATHERMAP_API_KEY environment variable to enable weather integration.
           </p>
           <Link
             href="/settings?tab=barn"

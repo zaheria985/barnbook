@@ -15,6 +15,7 @@ export interface WeatherSettings {
   footing_dry_hours_per_inch: number;
   auto_tune_drying_rate: boolean;
   last_tuned_at: string | null;
+  location_changed_at: string | null;
   updated_at: string;
 }
 
@@ -23,7 +24,8 @@ export async function getSettings(): Promise<WeatherSettings | null> {
     `SELECT id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
             cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
             has_indoor_arena, footing_caution_inches, footing_danger_inches,
-            footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at, updated_at
+            footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at,
+            location_changed_at, updated_at
      FROM weather_settings
      LIMIT 1`
   );
@@ -48,6 +50,21 @@ export async function updateSettings(data: {
   const fields: string[] = [];
   const values: (number | boolean | Date | null)[] = [];
   let idx = 1;
+
+  // Detect a real location move so we can stamp a new footing "era". Compare
+  // the incoming coordinates against what's stored; only a genuine change
+  // (not a re-save of the same values) rolls the era.
+  let locationChanged = false;
+  if (data.location_lat !== undefined || data.location_lng !== undefined) {
+    const existing = await getSettings();
+    const toNum = (v: number | null | undefined) =>
+      v === null || v === undefined ? null : Number(v);
+    const curLat = toNum(existing?.location_lat);
+    const curLng = toNum(existing?.location_lng);
+    const newLat = data.location_lat !== undefined ? toNum(data.location_lat) : curLat;
+    const newLng = data.location_lng !== undefined ? toNum(data.location_lng) : curLng;
+    locationChanged = newLat !== curLat || newLng !== curLng;
+  }
 
   if (data.location_lat !== undefined) {
     fields.push(`location_lat = $${idx++}`);
@@ -101,6 +118,9 @@ export async function updateSettings(data: {
     fields.push(`last_tuned_at = $${idx++}`);
     values.push(data.last_tuned_at);
   }
+  if (locationChanged) {
+    fields.push(`location_changed_at = now()`);
+  }
 
   if (fields.length === 0) {
     const existing = await getSettings();
@@ -115,7 +135,8 @@ export async function updateSettings(data: {
      RETURNING id, location_lat, location_lng, rain_cutoff_inches, rain_window_hours,
                cold_alert_temp_f, heat_alert_temp_f, wind_cutoff_mph,
                has_indoor_arena, footing_caution_inches, footing_danger_inches,
-               footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at, updated_at`,
+               footing_dry_hours_per_inch, auto_tune_drying_rate, last_tuned_at,
+               location_changed_at, updated_at`,
     values
   );
   return res.rows[0];

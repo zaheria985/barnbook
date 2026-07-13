@@ -15,23 +15,38 @@ function formatCurrency(n: number) {
 }
 
 function ProgressBar({ spent, budgeted }: { spent: number; budgeted: number }) {
-  const percentage = budgeted > 0 ? (spent / budgeted) * 100 : 0;
+  const hasBudget = budgeted > 0;
+  const unbudgetedSpend = !hasBudget && spent > 0;
+  const percentage = hasBudget ? (spent / budgeted) * 100 : 0;
   const clamped = Math.min(percentage, 100);
 
   let colorClass = "bg-[var(--success-solid)]";
-  if (percentage > 100) colorClass = "bg-[var(--error-text)]";
+  if (unbudgetedSpend || percentage > 100) colorClass = "bg-[var(--error-text)]";
   else if (percentage >= 80) colorClass = "bg-[var(--warning-solid)]";
+
+  // Fill the bar for unbudgeted spend to signal an over-budget condition.
+  const barWidth = hasBudget ? clamped : unbudgetedSpend ? 100 : 0;
+
+  const label = hasBudget
+    ? `${percentage.toFixed(0)}% of budget`
+    : unbudgetedSpend
+      ? `Unbudgeted — ${formatCurrency(spent)} spent`
+      : "No budget set";
 
   return (
     <div className="mt-2">
       <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-subtle)]">
         <div
           className={`h-full ${colorClass} transition-all`}
-          style={{ width: `${clamped}%` }}
+          style={{ width: `${barWidth}%` }}
         />
       </div>
-      <p className="mt-1 text-xs text-[var(--text-muted)]">
-        {percentage.toFixed(0)}% of budget
+      <p
+        className={`mt-1 text-xs ${
+          unbudgetedSpend ? "text-[var(--error-text)]" : "text-[var(--text-muted)]"
+        }`}
+      >
+        {label}
       </p>
     </div>
   );

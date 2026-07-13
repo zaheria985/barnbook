@@ -15,7 +15,7 @@ export async function GET() {
 
   if (!isConfigured()) {
     return NextResponse.json(
-      { error: "WeatherKit not configured", configured: false },
+      { error: "OpenWeatherMap not configured", configured: false },
       { status: 503 }
     );
   }
