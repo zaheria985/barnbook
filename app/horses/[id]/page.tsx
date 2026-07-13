@@ -45,6 +45,7 @@ interface FarrierRecord {
   id: string;
   horse_id: string;
   visit_date: string;
+  next_due_date: string | null;
   provider: string | null;
   service_type: string;
   findings: string | null;
