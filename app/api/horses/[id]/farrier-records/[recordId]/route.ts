@@ -21,6 +21,7 @@ export async function PUT(
 
     const data: Record<string, unknown> = {};
     if (body.visit_date !== undefined) data.visit_date = body.visit_date;
+    if (body.next_due_date !== undefined) data.next_due_date = body.next_due_date || null;
     if (body.provider !== undefined) data.provider = body.provider?.trim() || null;
     if (body.service_type !== undefined) data.service_type = body.service_type;
     if (body.findings !== undefined) data.findings = body.findings?.trim() || null;

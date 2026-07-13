@@ -4,14 +4,28 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  IconHome,
   IconSliders,
   IconClipboard,
+  IconChartLine,
+  IconReceipt,
+  IconTable,
+  IconStore,
+  IconInbox,
+  IconHorse,
   IconX,
 } from "./icons";
 import ThemeToggle from "./ThemeToggle";
 
 const quickLinks = [
+  { href: "/", label: "Home", icon: IconHome },
   { href: "/horses", label: "Horses", icon: IconClipboard },
+  { href: "/budget/income", label: "Income", icon: IconChartLine },
+  { href: "/budget/expenses", label: "Expenses", icon: IconReceipt },
+  { href: "/budget/bulk", label: "Bulk Entry", icon: IconTable },
+  { href: "/budget/vendors", label: "Vendors", icon: IconStore },
+  { href: "/budget/pending", label: "Pending", icon: IconInbox },
+  { href: "/rides/stats", label: "Ride Stats", icon: IconHorse },
 ];
 
 const settingsItems = [

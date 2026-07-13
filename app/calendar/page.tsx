@@ -26,6 +26,7 @@ export default function CalendarPage() {
   const [rideDays, setRideDays] = useState<ScoredDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [weatherStatus, setWeatherStatus] = useState<"ok" | "unconfigured" | "error">("ok");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -43,9 +44,15 @@ export default function CalendarPage() {
       if (!eventsRes.ok) throw new Error("Failed to fetch events");
       setEvents(await eventsRes.json());
 
-      // Ride days may 503 if weather not configured — that's fine
+      // Distinguish "weather not configured" (503) from a transient failure so
+      // the user can tell the difference from simply having no forecast.
       if (rideDaysRes && rideDaysRes.ok) {
         setRideDays(await rideDaysRes.json());
+        setWeatherStatus("ok");
+      } else if (rideDaysRes && rideDaysRes.status === 503) {
+        setWeatherStatus("unconfigured");
+      } else {
+        setWeatherStatus("error");
       }
     } catch {
       setError("Failed to load events");
@@ -137,6 +144,12 @@ export default function CalendarPage() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {weatherStatus === "error" && (
+        <div className="mb-4 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-2 text-xs text-[var(--warning-text)]">
+          Weather forecast temporarily unavailable — ride-day scores are hidden for now.
         </div>
       )}
 

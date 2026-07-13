@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
+  IconHome,
   IconWallet,
   IconChartLine,
   IconTable,
@@ -19,6 +20,7 @@ import {
 import ThemeToggle from "@/components/ThemeToggle";
 
 const mainItems = [
+  { href: "/", label: "Home", icon: IconHome },
   { href: "/budget", label: "Budget", icon: IconWallet },
   { href: "/budget/income", label: "Income", icon: IconChartLine },
   { href: "/budget/expenses", label: "Expenses", icon: IconReceipt },

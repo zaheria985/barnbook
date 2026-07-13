@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+interface SyncRun {
+  sync_type: string;
+  last_run_at: string;
+  last_status: string;
+  last_error: string | null;
+}
+
 interface SyncStatus {
   weatherkit: {
     configured: boolean;
@@ -12,7 +19,14 @@ interface SyncStatus {
   icloud: {
     configured: boolean;
   };
+  runs?: SyncRun[];
 }
+
+const SYNC_LABELS: Record<string, string> = {
+  icloud: "iCloud calendar sync",
+  reminders_push: "Reminders push",
+  reminders_pull: "Reminders pull",
+};
 
 interface IcloudCalendar {
   id: string;
@@ -195,6 +209,43 @@ export default function IntegrationsSection() {
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
+        </div>
+      )}
+
+      {status?.runs && status.runs.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+            Recent sync activity
+          </h2>
+          <div className="space-y-1">
+            {status.runs.map((run) => {
+              const failed = run.last_status !== "success";
+              const stale =
+                Date.now() - new Date(run.last_run_at).getTime() > 6 * 60 * 60 * 1000;
+              return (
+                <div
+                  key={run.sync_type}
+                  className="flex items-center justify-between gap-2 text-xs"
+                >
+                  <span className="text-[var(--text-secondary)]">
+                    {SYNC_LABELS[run.sync_type] || run.sync_type}
+                  </span>
+                  <span
+                    className={
+                      failed
+                        ? "text-[var(--error-text)]"
+                        : stale
+                          ? "text-[var(--warning-text)]"
+                          : "text-[var(--text-muted)]"
+                    }
+                    title={run.last_error || undefined}
+                  >
+                    {failed ? "failed" : "ok"} · {new Date(run.last_run_at).toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

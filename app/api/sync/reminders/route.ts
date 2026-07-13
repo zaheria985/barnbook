@@ -6,6 +6,7 @@ import * as radicale from "@/lib/radicale";
 import { getEvent, updateEvent } from "@/lib/queries/events";
 import { getChecklist } from "@/lib/queries/event-checklists";
 import { getIcloudSettings } from "@/lib/queries/icloud-sync";
+import { recordSyncRun } from "@/lib/queries/sync-runs";
 import pool from "@/lib/db";
 
 export async function POST(request: NextRequest) {
@@ -80,6 +81,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await recordSyncRun("reminders_push", "success", null, {
+      synced_items: checklist.length,
+    }).catch(() => {});
     return NextResponse.json({
       success: true,
       reminder_uid: mainUid,
@@ -88,6 +92,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Failed to sync reminders:", message);
+    await recordSyncRun("reminders_push", "error", message).catch(() => {});
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

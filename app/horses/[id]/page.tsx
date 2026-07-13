@@ -45,6 +45,7 @@ interface FarrierRecord {
   id: string;
   horse_id: string;
   visit_date: string;
+  next_due_date: string | null;
   provider: string | null;
   service_type: string;
   findings: string | null;
@@ -173,6 +174,7 @@ export default function HorseDetailPage() {
   const [showFarrierModal, setShowFarrierModal] = useState(false);
   const [editingFarrierId, setEditingFarrierId] = useState<string | null>(null);
   const [farrierVisitDate, setFarrierVisitDate] = useState(localToday());
+  const [farrierNextDue, setFarrierNextDue] = useState("");
   const [farrierProvider, setFarrierProvider] = useState("");
   const [farrierServiceType, setFarrierServiceType] = useState("trim");
   const [farrierFindings, setFarrierFindings] = useState("");
@@ -514,6 +516,7 @@ export default function HorseDetailPage() {
   // --- Farrier record handlers ---
   function resetFarrierForm() {
     setFarrierVisitDate(localToday());
+    setFarrierNextDue("");
     setFarrierProvider("");
     setFarrierServiceType("trim");
     setFarrierFindings("");
@@ -529,6 +532,7 @@ export default function HorseDetailPage() {
   function openEditFarrier(r: FarrierRecord) {
     setEditingFarrierId(r.id);
     setFarrierVisitDate(r.visit_date);
+    setFarrierNextDue(r.next_due_date || "");
     setFarrierProvider(r.provider || "");
     setFarrierServiceType(r.service_type || "trim");
     setFarrierFindings(r.findings || "");
@@ -542,6 +546,7 @@ export default function HorseDetailPage() {
     try {
       const body = {
         visit_date: farrierVisitDate,
+        next_due_date: farrierNextDue || null,
         provider: farrierProvider.trim() || null,
         service_type: farrierServiceType,
         findings: farrierFindings.trim() || null,
@@ -1180,6 +1185,11 @@ export default function HorseDetailPage() {
           <div>
             <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Visit Date</label>
             <input type="date" value={farrierVisitDate} onChange={(e) => setFarrierVisitDate(e.target.value)} required className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Next Due (optional)</label>
+            <input type="date" value={farrierNextDue} onChange={(e) => setFarrierNextDue(e.target.value)} className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]" />
+            <p className="mt-1 text-[10px] text-[var(--text-muted)]">Typical trim/shoe cycle is ~6 weeks. Shows on the dashboard when due.</p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Provider</label>
