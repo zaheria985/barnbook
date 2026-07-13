@@ -49,27 +49,35 @@ export function estimateMoisture(
 ): MoistureEstimate {
   const base_evap = 1.0 / settings.footing_dry_hours_per_inch;
 
-  // Use today's forecast for drying conditions (fallback to current weather)
+  // Fallback drying conditions (today's forecast / current weather) used when a
+  // historical hour didn't carry its own conditions.
   const today = forecastDays[0];
-  const cloud_pct = today?.clouds_pct ?? 50;
-  const temp_f = today?.high_f ?? currentWeather.temperature_f;
-  const wind_mph = today?.wind_speed_mph ?? currentWeather.wind_speed_mph;
+  const fallback_cloud_pct = today?.clouds_pct ?? 50;
+  const fallback_temp_f = today?.high_f ?? currentWeather.temperature_f;
+  const fallback_wind_mph = today?.wind_speed_mph ?? currentWeather.wind_speed_mph;
+  const fallbackEvap = evaporationRate(
+    fallback_cloud_pct, fallback_temp_f, fallback_wind_mph, base_evap
+  );
 
-  // Run simulation forward through historical hourly rain
+  // Run simulation forward through historical hourly rain, drying each hour at
+  // that hour's own conditions (a cold cloudy night dries far slower than a
+  // warm sunny afternoon) instead of one blanket rate for the whole window.
   let moisture = 0;
-  const evap = evaporationRate(cloud_pct, temp_f, wind_mph, base_evap);
-
   for (const entry of recentRain) {
     moisture += entry.rain_inches;
-    moisture -= evap;
+    const hourEvap =
+      entry.temp_f != null && entry.clouds_pct != null && entry.wind_mph != null
+        ? evaporationRate(entry.clouds_pct, entry.temp_f, entry.wind_mph, base_evap)
+        : fallbackEvap;
+    moisture -= hourEvap;
     if (moisture < 0) moisture = 0;
   }
 
   // Add current precipitation if actively raining
   moisture += currentWeather.precipitation_inches;
 
-  // Estimate hours to dry at current evaporation rate
-  const hours_to_dry = evap > 0 ? Math.ceil(moisture / evap) : moisture > 0 ? 999 : 0;
+  // Estimate hours to dry at the current (fallback) evaporation rate
+  const hours_to_dry = fallbackEvap > 0 ? Math.ceil(moisture / fallbackEvap) : moisture > 0 ? 999 : 0;
 
   return {
     current_moisture: Math.round(moisture * 100) / 100,
@@ -88,21 +96,21 @@ export function estimateFutureMoisture(
   let moisture = currentMoisture;
   let rainOnTargetDay = 0;
 
-  // Project forward through forecast days up to and including dayIndex
-  for (let i = 0; i <= dayIndex && i < forecastDays.length; i++) {
+  // Project forward from day 1. currentMoisture already represents today
+  // (day 0), so starting at i=0 would re-add day-0 rain and re-dry it — a
+  // double count that skewed every future day's footing call.
+  for (let i = 1; i <= dayIndex && i < forecastDays.length; i++) {
     const day = forecastDays[i];
-    // Add forecast rain for the day
-    // Use higher of: forecast volume, or probability-weighted minimum
-    // This ensures 80% rain chance adds at least 0.20" even if volume field is low
-    if (i > 0 || dayIndex > 0) {
-      const probRain = (day.precipitation_chance / 100) * settings.rain_cutoff_inches;
-      const rainToAdd = Math.max(day.precipitation_inches, probRain);
-      moisture += rainToAdd;
-      if (i === dayIndex) rainOnTargetDay = rainToAdd;
-    }
+    // Add forecast rain for the day.
+    // Use higher of: forecast volume, or probability-weighted minimum, so an
+    // 80% rain chance adds at least ~0.20" even if the volume field is low.
+    const probRain = (day.precipitation_chance / 100) * settings.rain_cutoff_inches;
+    const rainToAdd = Math.max(day.precipitation_inches, probRain);
+    moisture += rainToAdd;
+    if (i === dayIndex) rainOnTargetDay = rainToAdd;
 
-    // Apply 24 hours of drying for each full day
-    const hoursOfDrying = i < dayIndex ? 24 : 12; // partial day for the target day
+    // Apply drying: full 24h for intermediate days, a partial 12h for the target.
+    const hoursOfDrying = i < dayIndex ? 24 : 12;
     const evap = evaporationRate(day.clouds_pct, day.high_f, day.wind_speed_mph, base_evap);
     moisture -= evap * hoursOfDrying;
     if (moisture < 0) moisture = 0;

@@ -2,6 +2,7 @@
 
 import DayCell, { type SpannedEvent } from "./DayCell";
 import type { Event } from "@/lib/queries/events";
+import { localToday } from "@/lib/dates";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -85,7 +86,7 @@ export default function MonthGrid({
     }
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
 
   return (
     <div>

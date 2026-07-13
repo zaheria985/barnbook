@@ -3,7 +3,7 @@ import * as caldav from "@/lib/caldav";
 import * as radicale from "@/lib/radicale";
 import { getSettings } from "@/lib/queries/weather-settings";
 import { getKeywords } from "@/lib/queries/detection-keywords";
-import { createEvent } from "@/lib/queries/events";
+import { createEvent, topUpRecurringInstances } from "@/lib/queries/events";
 import { getSchedule } from "@/lib/queries/ride-schedule";
 import { isConfigured as weatherConfigured, getForecast, getRecentRain, getLocalHour } from "@/lib/openweathermap";
 import { scoreDays } from "@/lib/weather-rules";
@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Keep recurring event series materialized ~3 months ahead. Runs on the 2h
+    // sync so weekly/monthly series don't silently run dry. Non-fatal.
+    await topUpRecurringInstances().catch((err) =>
+      console.error("Recurring top-up failed:", err)
+    );
+
     const icloudSettings = await getIcloudSettings();
     if (!icloudSettings || icloudSettings.read_calendar_ids.length === 0) {
       return NextResponse.json(

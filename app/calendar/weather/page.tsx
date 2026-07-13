@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { ScoredDay } from "@/lib/weather-rules";
 import type { Event } from "@/lib/queries/events";
+import { localToday, localYesterday } from "@/lib/dates";
 
 const SCORE_STYLES = {
   green: "bg-[var(--success-bg)] text-[var(--success-text)] border-[var(--success-border)]",
@@ -50,12 +51,6 @@ function formatTime12h(time: string): string {
   return m === "00" ? `${display} ${suffix}` : `${display}:${m} ${suffix}`;
 }
 
-function getYesterdayDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
-}
-
 export default function WeatherDashboardPage() {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [rideDays, setRideDays] = useState<ScoredDay[]>([]);
@@ -73,7 +68,7 @@ export default function WeatherDashboardPage() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = localToday();
         const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split("T")[0];
@@ -103,24 +98,16 @@ export default function WeatherDashboardPage() {
           setRideEvents(allEvents.filter((e) => e.event_type === "ride"));
         }
 
-        // Check if we need yesterday's feedback
-        const yesterday = getYesterdayDate();
+        // Check if we need yesterday's feedback. The prediction comes from the
+        // persisted snapshot for that date (the live forecast array only covers
+        // today forward, so yesterday was never in it — the prompt never fired).
+        const yesterday = localYesterday();
         const feedbackRes = await fetch(`/api/footing-feedback?date=${yesterday}`);
         if (feedbackRes.ok) {
-          const { feedback, beforeEra } = await feedbackRes.json();
-          if (!feedback && !beforeEra) {
-            const yesterdayScored = scored.find(
-              (d) => d.date === yesterday
-            );
-            if (yesterdayScored) {
-              const footingReason = yesterdayScored.reasons.find(
-                (r) => r.startsWith("Footing")
-              );
-              setYesterdayPrediction(
-                footingReason ? yesterdayScored.score : "green"
-              );
-              setShowYesterdayPrompt(true);
-            }
+          const { feedback, beforeEra, predictedScore } = await feedbackRes.json();
+          if (!feedback && !beforeEra && predictedScore) {
+            setYesterdayPrediction(predictedScore);
+            setShowYesterdayPrompt(true);
           }
         }
       } catch {
@@ -213,7 +200,7 @@ export default function WeatherDashboardPage() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          date: getYesterdayDate(),
+                          date: localYesterday(),
                           actual_footing: rating,
                         }),
                       });

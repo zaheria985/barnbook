@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getEvent, updateEvent, deleteEvent, deleteFutureInstances, updateFutureInstances } from "@/lib/queries/events";
+import { deleteRemindersForEvent } from "@/lib/reminder-sync";
 
 export async function GET(
   _request: NextRequest,
@@ -86,6 +87,12 @@ export async function DELETE(
 
   try {
     const { id } = await params;
+
+    // Remove any pushed reminder VTODOs before deleting the row (best-effort;
+    // never blocks the delete). Done first so the stored reminder_uids exist.
+    await deleteRemindersForEvent(id).catch((err) =>
+      console.error("Reminder cleanup on event delete failed:", err)
+    );
 
     // Check if this is a parent recurring event — also delete future instances
     const event = await getEvent(id);

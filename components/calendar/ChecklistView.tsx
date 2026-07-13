@@ -1,6 +1,7 @@
 "use client";
 
 import type { EventChecklistItem } from "@/lib/queries/event-checklists";
+import { localToday } from "@/lib/dates";
 
 export default function ChecklistView({
   items,
@@ -37,7 +38,7 @@ export default function ChecklistView({
           const isOverdue =
             !item.is_completed &&
             item.due_date &&
-            item.due_date.split("T")[0] < new Date().toISOString().split("T")[0];
+            item.due_date.split("T")[0] < localToday();
 
           return (
             <button

@@ -37,7 +37,11 @@ export async function upsertSnapshot(
        forecast_clouds_pct = EXCLUDED.forecast_clouds_pct,
        forecast_wind_mph = EXCLUDED.forecast_wind_mph,
        drying_rate_at_time = EXCLUDED.drying_rate_at_time,
-       created_at = now()`,
+       created_at = now()
+     -- Only refresh predictions for still-future days; once a date arrives the
+     -- snapshot is frozen so footing accuracy compares actual footing against
+     -- what we predicted ahead of time, not a same-day re-forecast.
+     WHERE weather_prediction_snapshots.date > CURRENT_DATE`,
     [
       scoredDay.date,
       scoredDay.score,

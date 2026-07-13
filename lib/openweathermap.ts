@@ -58,6 +58,11 @@ export function getLocalHour(isoTimestamp: string, tzOffsetSec: number): number 
 export interface HourlyRain {
   hour: Date;
   rain_inches: number;
+  // Per-hour drying conditions (from timemachine). Optional so older/partial
+  // data still works; the moisture model falls back to the daily forecast.
+  temp_f?: number;
+  clouds_pct?: number;
+  wind_mph?: number;
 }
 
 // In-memory cache with 15-minute TTL
@@ -192,6 +197,9 @@ async function fetchTimemachineDay(
   const hourly: HourlyRain[] = (raw.data || []).map((h: any) => ({
     hour: new Date(h.dt * 1000),
     rain_inches: mmToInches((h.rain?.["1h"] ?? 0) + (h.snow?.["1h"] ?? 0)),
+    temp_f: h.temp != null ? Math.round(h.temp) : undefined,
+    clouds_pct: h.clouds ?? undefined,
+    wind_mph: h.wind_speed != null ? Math.round(h.wind_speed) : undefined,
   }));
 
   timemachineCache.set(cacheKey, { data: hourly, expires: Date.now() + TIMEMACHINE_CACHE_TTL });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as caldav from "@/lib/caldav";
+import * as radicale from "@/lib/radicale";
 import { getIcloudSettings } from "@/lib/queries/icloud-sync";
 import pool from "@/lib/db";
 
@@ -11,15 +12,21 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!caldav.isConfigured()) {
+  const icloudSettings = await getIcloudSettings();
+  const useRadicale = !!icloudSettings?.use_radicale;
+
+  if (!useRadicale && !caldav.isConfigured()) {
     return NextResponse.json(
       { error: "iCloud not configured", configured: false },
       { status: 503 }
     );
   }
 
-  const icloudSettings = await getIcloudSettings();
-  if (!icloudSettings?.reminders_checklists_id) {
+  // Resolve the checklists list for whichever backend is active.
+  const calendarId = useRadicale
+    ? icloudSettings?.radicale_checklists_collection
+    : icloudSettings?.reminders_checklists_id;
+  if (!calendarId) {
     return NextResponse.json(
       { error: "No Event checklists list configured", configured: false },
       { status: 503 }
@@ -27,10 +34,10 @@ export async function POST() {
   }
 
   try {
-    const calendarId = icloudSettings.reminders_checklists_id;
-
-    // Fetch all reminders including completed ones
-    const reminders = await caldav.fetchReminders([calendarId], true);
+    // Fetch all reminders including completed ones, from the active backend.
+    const reminders = useRadicale
+      ? await radicale.fetchReminders([calendarId], true)
+      : await caldav.fetchReminders([calendarId], true);
     const completedUids = new Set(
       reminders.filter((r) => r.completed).map((r) => r.uid)
     );
