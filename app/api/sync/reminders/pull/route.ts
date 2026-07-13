@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import * as caldav from "@/lib/caldav";
 import * as radicale from "@/lib/radicale";
 import { getIcloudSettings } from "@/lib/queries/icloud-sync";
+import { recordSyncRun } from "@/lib/queries/sync-runs";
 import pool from "@/lib/db";
 
 export async function POST() {
@@ -60,6 +61,10 @@ export async function POST() {
       }
     }
 
+    await recordSyncRun("reminders_pull", "success", null, {
+      checked: uncompleted.rows.length,
+      updated,
+    }).catch(() => {});
     return NextResponse.json({
       success: true,
       checked: uncompleted.rows.length,
@@ -67,6 +72,11 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Failed to pull reminders:", error);
+    await recordSyncRun(
+      "reminders_pull",
+      "error",
+      error instanceof Error ? error.message : String(error)
+    ).catch(() => {});
     return NextResponse.json(
       { error: "Failed to pull from iCloud Reminders" },
       { status: 500 }

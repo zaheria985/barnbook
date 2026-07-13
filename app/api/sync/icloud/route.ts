@@ -15,6 +15,7 @@ import {
   replaceSuggestedWindows,
   getSuggestedWindows,
 } from "@/lib/queries/icloud-sync";
+import { recordSyncRun } from "@/lib/queries/sync-runs";
 
 export async function POST(request: NextRequest) {
   // Auth via bearer token (cron) or session
@@ -431,16 +432,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const result = {
       events_found: icalEvents.length,
       keywords_matched: keywordsMatched,
       windows_suggested: windowsSuggested,
       checklists_pushed: checklistsPushed,
       blanket_reminders: blanketRemindersCreated,
       treatment_reminders: treatmentRemindersCreated,
-    });
+    };
+    await recordSyncRun("icloud", "success", null, result).catch(() => {});
+    return NextResponse.json(result);
   } catch (error) {
     console.error("iCloud sync failed:", error);
+    await recordSyncRun(
+      "icloud",
+      "error",
+      error instanceof Error ? error.message : String(error)
+    ).catch(() => {});
     return NextResponse.json(
       { error: "iCloud sync failed" },
       { status: 500 }

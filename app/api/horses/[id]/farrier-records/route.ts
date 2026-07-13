@@ -51,6 +51,7 @@ export async function POST(
     const record = await createFarrierRecord({
       horse_id: id,
       visit_date: body.visit_date,
+      next_due_date: body.next_due_date || null,
       provider: body.provider?.trim() || null,
       service_type: body.service_type || "trim",
       findings: body.findings?.trim() || null,

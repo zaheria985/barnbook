@@ -57,6 +57,19 @@ export default function BudgetPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [categoryTrends, setCategoryTrends] = useState<Map<string, number[]>>(new Map());
   const [subItemTrendsMap, setSubItemTrendsMap] = useState<Map<string, Record<string, number[]>>>(new Map());
+  const [pendingCount, setPendingCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/email/pending")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => setPendingCount(Array.isArray(rows) ? rows.length : 0))
+      .catch(() => {});
+    fetch("/api/email/failed")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => setFailedCount(Array.isArray(rows) ? rows.length : 0))
+      .catch(() => {});
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -228,6 +241,20 @@ export default function BudgetPage() {
           {error}
           <button onClick={() => setError("")} className="ml-2 font-medium underline">Dismiss</button>
         </div>
+      )}
+
+      {(pendingCount > 0 || failedCount > 0) && (
+        <Link
+          href="/budget/pending"
+          className="mb-4 flex items-center justify-between rounded-lg border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3 text-sm text-[var(--warning-text)] hover:opacity-90"
+        >
+          <span>
+            {pendingCount > 0 && `${pendingCount} email expense${pendingCount === 1 ? "" : "s"} to review`}
+            {pendingCount > 0 && failedCount > 0 && " · "}
+            {failedCount > 0 && `${failedCount} failed to import`}
+          </span>
+          <span aria-hidden>&rarr;</span>
+        </Link>
       )}
 
       {/* Charts at the top */}

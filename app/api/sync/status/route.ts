@@ -4,12 +4,15 @@ import { authOptions } from "@/lib/auth";
 import * as weatherkit from "@/lib/openweathermap";
 import * as caldav from "@/lib/caldav";
 import { isConfigured as radicaleConfigured } from "@/lib/radicale";
+import { getSyncRuns } from "@/lib/queries/sync-runs";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const runs = await getSyncRuns().catch(() => []);
 
   return NextResponse.json({
     weatherkit: {
@@ -24,5 +27,6 @@ export async function GET() {
     radicale: {
       configured: radicaleConfigured(),
     },
+    runs,
   });
 }

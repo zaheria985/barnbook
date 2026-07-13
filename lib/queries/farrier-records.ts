@@ -4,6 +4,7 @@ export interface FarrierRecord {
   id: string;
   horse_id: string;
   visit_date: string;
+  next_due_date: string | null;
   provider: string | null;
   service_type: string;
   findings: string | null;
@@ -13,20 +14,23 @@ export interface FarrierRecord {
   updated_at: string;
 }
 
+function dateOnly(v: unknown): string | null {
+  if (v == null) return null;
+  return typeof v === "string" ? v : (v as Date).toISOString().split("T")[0];
+}
+
 function serializeDates(row: Record<string, unknown>): FarrierRecord {
   return {
     ...row,
-    visit_date:
-      typeof row.visit_date === "string"
-        ? row.visit_date
-        : (row.visit_date as Date).toISOString().split("T")[0],
+    visit_date: dateOnly(row.visit_date),
+    next_due_date: dateOnly(row.next_due_date),
     cost: row.cost != null ? Number(row.cost) : null,
   } as FarrierRecord;
 }
 
 export async function getFarrierRecords(horseId: string): Promise<FarrierRecord[]> {
   const res = await pool.query(
-    `SELECT id, horse_id, visit_date, provider, service_type, findings, notes, cost, created_at, updated_at
+    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at
      FROM farrier_records
      WHERE horse_id = $1
      ORDER BY visit_date DESC`,
@@ -37,7 +41,7 @@ export async function getFarrierRecords(horseId: string): Promise<FarrierRecord[
 
 export async function getFarrierRecord(id: string): Promise<FarrierRecord | null> {
   const res = await pool.query(
-    `SELECT id, horse_id, visit_date, provider, service_type, findings, notes, cost, created_at, updated_at
+    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at
      FROM farrier_records
      WHERE id = $1`,
     [id]
@@ -49,6 +53,7 @@ export async function getFarrierRecord(id: string): Promise<FarrierRecord | null
 export async function createFarrierRecord(data: {
   horse_id: string;
   visit_date: string;
+  next_due_date?: string | null;
   provider?: string | null;
   service_type?: string | null;
   findings?: string | null;
@@ -56,12 +61,13 @@ export async function createFarrierRecord(data: {
   cost?: number | null;
 }): Promise<FarrierRecord> {
   const res = await pool.query(
-    `INSERT INTO farrier_records (horse_id, visit_date, provider, service_type, findings, notes, cost)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, horse_id, visit_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
+    `INSERT INTO farrier_records (horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
     [
       data.horse_id,
       data.visit_date,
+      data.next_due_date ?? null,
       data.provider ?? null,
       data.service_type ?? "trim",
       data.findings ?? null,
@@ -76,6 +82,7 @@ export async function updateFarrierRecord(
   id: string,
   data: {
     visit_date?: string;
+    next_due_date?: string | null;
     provider?: string | null;
     service_type?: string | null;
     findings?: string | null;
@@ -90,6 +97,10 @@ export async function updateFarrierRecord(
   if (data.visit_date !== undefined) {
     fields.push(`visit_date = $${idx++}`);
     values.push(data.visit_date);
+  }
+  if (data.next_due_date !== undefined) {
+    fields.push(`next_due_date = $${idx++}`);
+    values.push(data.next_due_date);
   }
   if (data.provider !== undefined) {
     fields.push(`provider = $${idx++}`);
@@ -119,7 +130,7 @@ export async function updateFarrierRecord(
 
   const res = await pool.query(
     `UPDATE farrier_records SET ${fields.join(", ")} WHERE id = $${idx}
-     RETURNING id, horse_id, visit_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
+     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
     values
   );
 
