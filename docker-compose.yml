@@ -35,7 +35,7 @@ services:
     ports:
       - "${APP_PORT:-3500}:3500"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3500/api/auth/providers',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3500/api/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,6 +72,34 @@ services:
         echo "0 */2 * * * curl -sf -X POST http://app:3500/api/sync/icloud -H \"Authorization: Bearer $$ICLOUD_SYNC_SECRET\" > /proc/1/fd/1 2>&1" | crontab -
         crond -f -l 6
 
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - barnbook_backups:/backups
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Backup sidecar started; dumping daily, keeping newest 14."
+        while true; do
+          ts=$$(date +%F_%H%M%S)
+          if pg_dump -h db -U barnbook -d barnbook > /backups/barnbook-$$ts.sql 2>/backups/last-error.log; then
+            echo "backup ok $$ts"
+          else
+            echo "backup FAILED $$ts (see /backups/last-error.log)"
+            rm -f /backups/barnbook-$$ts.sql
+          fi
+          ls -1t /backups/barnbook-*.sql 2>/dev/null | tail -n +15 | xargs -r rm -f
+          sleep 86400
+        done
+
 volumes:
   barnbook_data:
   radicale_data:
+  barnbook_backups:

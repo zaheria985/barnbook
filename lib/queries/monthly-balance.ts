@@ -50,18 +50,16 @@ export async function calculateMonthEndBalance(
     getSales(yearMonth),
   ]);
 
-  const total_budgeted = budgets.reduce(
-    (s, b) => s + Number(b.budgeted_amount),
-    0
-  );
-  const total_spent = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const total_income_actual = income.reduce(
-    (s, i) => s + Number(i.actual_amount),
-    0
-  );
-  const total_sales = sales.reduce((s, sale) => s + Number(sale.amount), 0);
+  // Round each money total to cents at the boundary so accumulated floating
+  // point error can't drift the persisted savings balance over many closes.
+  const cents = (n: number) => Math.round(n * 100) / 100;
 
-  const net = total_income_actual + total_sales - total_spent;
+  const total_budgeted = cents(budgets.reduce((s, b) => s + Number(b.budgeted_amount), 0));
+  const total_spent = cents(expenses.reduce((s, e) => s + Number(e.amount), 0));
+  const total_income_actual = cents(income.reduce((s, i) => s + Number(i.actual_amount), 0));
+  const total_sales = cents(sales.reduce((s, sale) => s + Number(sale.amount), 0));
+
+  const net = cents(total_income_actual + total_sales - total_spent);
 
   return {
     year_month: yearMonth,
@@ -149,7 +147,8 @@ export async function closeMonth(
 
     if (calc.net_result !== 0) {
       await client.query(
-        `UPDATE horse_savings_account SET balance = balance + $1, updated_at = now()`,
+        `UPDATE horse_savings_account SET balance = balance + $1, updated_at = now()
+         WHERE id = (SELECT id FROM horse_savings_account ORDER BY id LIMIT 1)`,
         [calc.net_result]
       );
     }
@@ -199,7 +198,8 @@ export async function reopenMonth(
 
     if (netResult !== 0) {
       await client.query(
-        `UPDATE horse_savings_account SET balance = balance - $1, updated_at = now()`,
+        `UPDATE horse_savings_account SET balance = balance - $1, updated_at = now()
+         WHERE id = (SELECT id FROM horse_savings_account ORDER BY id LIMIT 1)`,
         [netResult]
       );
     }

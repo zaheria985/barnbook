@@ -80,6 +80,13 @@ actor APIClient {
             throw APIError.unauthorized
         }
 
+        // A 4xx (other than 401) means the payload is bad and retrying won't
+        // help — surface it as a permanent client error so the queue can
+        // dead-letter it instead of looping forever.
+        if (400..<500).contains(httpResponse.statusCode) {
+            throw APIError.clientError(httpResponse.statusCode)
+        }
+
         guard (200...299).contains(httpResponse.statusCode) else {
             throw APIError.requestFailed
         }
@@ -123,6 +130,7 @@ enum APIError: Error, LocalizedError {
     case csrfFailed
     case loginFailed
     case unauthorized
+    case clientError(Int)
     case requestFailed
 
     var errorDescription: String? {
@@ -131,6 +139,7 @@ enum APIError: Error, LocalizedError {
         case .csrfFailed: return "Failed to get CSRF token"
         case .loginFailed: return "Invalid email or password"
         case .unauthorized: return "Session expired"
+        case .clientError(let code): return "Request rejected (\(code))"
         case .requestFailed: return "Request failed"
         }
     }

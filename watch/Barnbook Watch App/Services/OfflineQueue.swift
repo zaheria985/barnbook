@@ -4,11 +4,14 @@ actor OfflineQueue {
     static let shared = OfflineQueue()
 
     private let directory: URL
+    private let deadLetterDirectory: URL
 
     private init() {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         directory = docs.appendingPathComponent("pending_rides", isDirectory: true)
+        deadLetterDirectory = docs.appendingPathComponent("failed_rides", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: deadLetterDirectory, withIntermediateDirectories: true)
     }
 
     var pendingCount: Int {
@@ -48,8 +51,15 @@ actor OfflineQueue {
                 } catch {
                     // Leave for next attempt
                 }
+            } catch APIError.clientError {
+                // Permanent rejection (e.g. 400 validation) — retrying loops
+                // forever. Move to a dead-letter folder so it stops thrashing
+                // the queue but the data isn't lost.
+                let dest = deadLetterDirectory.appendingPathComponent(file.lastPathComponent)
+                try? FileManager.default.removeItem(at: dest)
+                try? FileManager.default.moveItem(at: file, to: dest)
             } catch {
-                // Leave for next attempt
+                // Transient (network/5xx) — leave for next attempt
             }
         }
     }

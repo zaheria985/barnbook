@@ -350,13 +350,7 @@ export default function BudgetPage() {
       {data.has_defaults && (
         <div className="mb-6">
           <button
-            onClick={() => {
-              if (monthHasBudgets) {
-                openTemplatePicker();
-              } else {
-                openTemplatePicker();
-              }
-            }}
+            onClick={openTemplatePicker}
             disabled={applying}
             className="w-full rounded-xl border border-dashed border-[var(--interactive)] py-3 text-sm font-medium text-[var(--interactive)] hover:bg-[var(--interactive-muted)] disabled:opacity-50 transition-colors"
           >
