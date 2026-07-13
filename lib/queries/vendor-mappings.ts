@@ -105,6 +105,9 @@ export async function deleteMapping(id: string): Promise<boolean> {
 export async function matchVendor(
   vendorName: string
 ): Promise<VendorMapping | null> {
+  // Escape LIKE metacharacters in the stored pattern so a pattern containing
+  // % or _ matches literally (a bare "%" would otherwise match every vendor),
+  // and prefer the most specific (longest) pattern deterministically.
   const res = await pool.query(
     `SELECT vm.id, vm.vendor_pattern, vm.category_id, bc.name AS category_name,
             vm.sub_item_id, bcs.label AS sub_item_label,
@@ -112,7 +115,8 @@ export async function matchVendor(
      FROM vendor_mappings vm
      JOIN budget_categories bc ON bc.id = vm.category_id
      LEFT JOIN budget_category_sub_items bcs ON bcs.id = vm.sub_item_id
-     WHERE $1 ILIKE '%' || vm.vendor_pattern || '%'
+     WHERE $1 ILIKE '%' || replace(replace(vm.vendor_pattern, '%', '\\%'), '_', '\\_') || '%' ESCAPE '\\'
+     ORDER BY length(vm.vendor_pattern) DESC
      LIMIT 1`,
     [vendorName]
   );

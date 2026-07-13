@@ -279,6 +279,23 @@ Open `watch/Barnbook.xcodeproj` in Xcode 15+ to build and deploy. Requires macOS
 - Migrations are tracked in `db/migrations/` and applied by `db/migrate.js`.
 - On first Docker startup, `db/bootstrap.js` auto-applies the schema and seeds.
 
+### Backups
+
+The `backup` service in `docker-compose.yml` runs `pg_dump` daily into the
+`barnbook_backups` volume, keeping the newest 14 dumps. To restore or inspect:
+
+```bash
+# list backups
+docker compose exec backup ls -1 /backups
+# copy one out
+docker compose cp backup:/backups/barnbook-YYYY-MM-DD_HHMMSS.sql ./restore.sql
+# restore into the db
+docker compose exec -T db psql -U barnbook -d barnbook < ./restore.sql
+```
+
+Take a manual dump before running data-affecting migrations:
+`docker compose exec db pg_dump -U barnbook barnbook > barnbook-$(date +%F).sql`
+
 ## Troubleshooting
 
 - **Login loop or auth failures:**

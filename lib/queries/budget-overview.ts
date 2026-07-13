@@ -108,7 +108,9 @@ export async function getSavingsBalance(): Promise<number> {
   const res = await pool.query(
     `SELECT balance FROM horse_savings_account LIMIT 1`
   );
-  return res.rows[0]?.balance || 0;
+  // node-postgres returns DECIMAL as a string; coerce so it isn't concatenated
+  // into arithmetic downstream.
+  return res.rows[0]?.balance != null ? Number(res.rows[0].balance) : 0;
 }
 
 export async function getPreviousMonthBalance(

@@ -218,8 +218,11 @@ export async function getRecentRain(
   const now = new Date();
   const results: HourlyRain[] = [];
 
-  // Fetch day-before-yesterday and yesterday via timemachine
-  for (let daysAgo = 2; daysAgo >= 0; daysAgo--) {
+  // Fetch enough timemachine days to actually cover windowHours (each call is
+  // cached 24h). Previously fixed at 3 days, so a window > ~72h silently saw no
+  // older rain. Clamp to 7 days to bound API usage.
+  const daysNeeded = Math.min(7, Math.max(2, Math.ceil(windowHours / 24) + 1));
+  for (let daysAgo = daysNeeded; daysAgo >= 0; daysAgo--) {
     const date = new Date(now);
     date.setDate(date.getDate() - daysAgo);
     date.setHours(12, 0, 0, 0); // noon for the timemachine timestamp

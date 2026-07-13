@@ -50,9 +50,12 @@ export async function POST(request: NextRequest) {
     const canterMin = Number(body.canter_minutes) || 0;
     const totalMin = Number(body.total_duration_minutes);
 
-    if (walkMin + trotMin + canterMin !== totalMin) {
+    // Active gait minutes may be LESS than total (halt/standing counts toward
+    // total but no gait); only reject when they exceed it. Strict equality
+    // rejected legitimate rides and, from the watch, harmless rounding drift.
+    if (walkMin + trotMin + canterMin > totalMin) {
       return NextResponse.json(
-        { error: "Gait minutes must sum to total duration" },
+        { error: "Gait minutes cannot exceed total duration" },
         { status: 400 }
       );
     }

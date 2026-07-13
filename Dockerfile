@@ -46,6 +46,6 @@ USER nextjs
 EXPOSE 3500
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-  CMD node -e "require('http').get('http://localhost:3500/api/auth/providers',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:3500/api/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
 
 CMD ["sh", "-c", "node db/bootstrap.js && node db/migrate.js && node server.js"]

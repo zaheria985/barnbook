@@ -18,10 +18,15 @@ struct RideSession: Codable, Identifiable {
     var syncStatus: SyncStatus
 
     var apiPayload: [String: Any] {
+        // Guarantee active gait minutes never exceed the reported total (the
+        // server rejects that); classification can drift a minute or two from
+        // the elapsed timer.
+        let gaitSum = walkMinutes + trotMinutes + canterMinutes
+        let total = max(totalDurationMinutes, gaitSum)
         var payload: [String: Any] = [
             "horse_id": horseId.uuidString.lowercased(),
             "date": ISO8601DateFormatter.dateOnly.string(from: date),
-            "total_duration_minutes": totalDurationMinutes,
+            "total_duration_minutes": total,
             "walk_minutes": walkMinutes,
             "trot_minutes": trotMinutes,
             "canter_minutes": canterMinutes,
