@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import { localToday } from "@/lib/dates";
 
 interface VetRecord {
   id: string;
@@ -131,7 +132,7 @@ export default function HorseDetailPage() {
   const [formName, setFormName] = useState("");
   const [formFrequency, setFormFrequency] = useState("");
   const [formStartDate, setFormStartDate] = useState(
-    new Date().toISOString().split("T")[0]
+    localToday()
   );
   const [formEndDate, setFormEndDate] = useState("");
   const [formOccurrenceCount, setFormOccurrenceCount] = useState("");
@@ -143,7 +144,7 @@ export default function HorseDetailPage() {
   const [vetRecords, setVetRecords] = useState<VetRecord[]>([]);
   const [showVetModal, setShowVetModal] = useState(false);
   const [editingVetId, setEditingVetId] = useState<string | null>(null);
-  const [vetDate, setVetDate] = useState(new Date().toISOString().split("T")[0]);
+  const [vetDate, setVetDate] = useState(localToday());
   const [vetProvider, setVetProvider] = useState("");
   const [vetReason, setVetReason] = useState("");
   const [vetNotes, setVetNotes] = useState("");
@@ -161,7 +162,7 @@ export default function HorseDetailPage() {
   const [vaccineModalOpen, setVaccineModalOpen] = useState(false);
   const [editingVaccine, setEditingVaccine] = useState<VaccineRecord | null>(null);
   const [vaccineName, setVaccineName] = useState("");
-  const [vaccineDateAdministered, setVaccineDateAdministered] = useState(new Date().toISOString().split("T")[0]);
+  const [vaccineDateAdministered, setVaccineDateAdministered] = useState(localToday());
   const [vaccineNextDueDate, setVaccineNextDueDate] = useState("");
   const [vaccineProvider, setVaccineProvider] = useState("");
   const [vaccineNotes, setVaccineNotes] = useState("");
@@ -171,7 +172,7 @@ export default function HorseDetailPage() {
   const [farrierRecords, setFarrierRecords] = useState<FarrierRecord[]>([]);
   const [showFarrierModal, setShowFarrierModal] = useState(false);
   const [editingFarrierId, setEditingFarrierId] = useState<string | null>(null);
-  const [farrierVisitDate, setFarrierVisitDate] = useState(new Date().toISOString().split("T")[0]);
+  const [farrierVisitDate, setFarrierVisitDate] = useState(localToday());
   const [farrierProvider, setFarrierProvider] = useState("");
   const [farrierServiceType, setFarrierServiceType] = useState("trim");
   const [farrierFindings, setFarrierFindings] = useState("");
@@ -246,7 +247,7 @@ export default function HorseDetailPage() {
   function resetForm() {
     setFormName("");
     setFormFrequency("");
-    setFormStartDate(new Date().toISOString().split("T")[0]);
+    setFormStartDate(localToday());
     setFormEndDate("");
     setFormOccurrenceCount("");
     setFormNotes("");
@@ -338,7 +339,7 @@ export default function HorseDetailPage() {
 
   // --- Vet record handlers ---
   function resetVetForm() {
-    setVetDate(new Date().toISOString().split("T")[0]);
+    setVetDate(localToday());
     setVetProvider("");
     setVetReason("");
     setVetNotes("");
@@ -451,7 +452,7 @@ export default function HorseDetailPage() {
   // --- Vaccine handlers ---
   function resetVaccineForm() {
     setVaccineName("");
-    setVaccineDateAdministered(new Date().toISOString().split("T")[0]);
+    setVaccineDateAdministered(localToday());
     setVaccineNextDueDate("");
     setVaccineProvider("");
     setVaccineNotes("");
@@ -512,7 +513,7 @@ export default function HorseDetailPage() {
 
   // --- Farrier record handlers ---
   function resetFarrierForm() {
-    setFarrierVisitDate(new Date().toISOString().split("T")[0]);
+    setFarrierVisitDate(localToday());
     setFarrierProvider("");
     setFarrierServiceType("trim");
     setFarrierFindings("");
@@ -723,7 +724,7 @@ export default function HorseDetailPage() {
 
   function renderScheduleCard(schedule: TreatmentSchedule) {
     const nextDue = getNextDueDate(schedule.start_date, schedule.frequency_days);
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     const isDueToday = nextDue === today;
     const isPastDue = nextDue < today;
 
@@ -1031,7 +1032,7 @@ export default function HorseDetailPage() {
         ) : (
           <div className="space-y-2">
             {vaccines.map((r) => {
-              const today = new Date().toISOString().split("T")[0];
+              const today = localToday();
               const isOverdue = r.next_due_date != null && r.next_due_date < today;
               return (
                 <div key={r.id} className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">

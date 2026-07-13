@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS monthly_budgets (
   budgeted_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(year_month, category_id, sub_item_id)
+  UNIQUE NULLS NOT DISTINCT (year_month, category_id, sub_item_id)
 );
 
 -- Expenses
@@ -388,6 +388,18 @@ CREATE TABLE IF NOT EXISTS suggested_ride_windows (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(date, start_time)
 );
+
+-- Failed Email Ingests (receipts that could not be parsed / arrived misconfigured)
+CREATE TABLE IF NOT EXISTS failed_ingests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject TEXT,
+  reason TEXT NOT NULL,
+  raw_payload JSONB,
+  resolved BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS failed_ingests_unresolved_idx
+  ON failed_ingests (created_at DESC) WHERE resolved = false;
 
 -- Schema Migrations tracking
 CREATE TABLE IF NOT EXISTS schema_migrations (

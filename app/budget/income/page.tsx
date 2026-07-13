@@ -6,6 +6,7 @@ import type { Sale } from "@/lib/queries/sales";
 import IncomeCategoryManager from "@/components/settings/IncomeCategoryManager";
 import IncomeTrendsChart from "@/components/budget/IncomeTrendsChart";
 import Modal from "@/components/ui/Modal";
+import { localToday } from "@/lib/dates";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -85,7 +86,7 @@ export default function IncomePage() {
   const [showAddSale, setShowAddSale] = useState(false);
   const [saleDescription, setSaleDescription] = useState("");
   const [saleAmount, setSaleAmount] = useState("");
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [saleDate, setSaleDate] = useState(() => localToday());
 
   const fetchData = useCallback(async () => {
     setLoading(true);

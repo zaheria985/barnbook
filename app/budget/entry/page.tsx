@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import TagPicker from "@/components/ui/TagPicker";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import { localToday } from "@/lib/dates";
 
 interface VendorTag {
   id: string;
@@ -20,7 +21,7 @@ export default function QuickEntryPage() {
 
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => localToday());
   const [categoryId, setCategoryId] = useState("");
   const [subItemId, setSubItemId] = useState("");
   const [vendorTags, setVendorTags] = useState<VendorTag[]>([]);

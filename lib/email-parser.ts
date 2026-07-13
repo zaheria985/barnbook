@@ -1,5 +1,7 @@
 // Email parser for Venmo receipt HTML ingestion
 
+import { localToday } from "@/lib/dates";
+
 export interface ParsedReceipt {
   amount: number;
   date: string;
@@ -8,26 +10,46 @@ export interface ParsedReceipt {
   source: string;
 }
 
+/** Extract a transaction amount, preferring a signed amount (Venmo shows the
+ *  payment with a +/- sign) over an arbitrary first dollar figure that could be
+ *  a fee, running balance, or promo. Returns null if no amount is found. */
+function extractAmount(html: string): number | null {
+  // Prefer a signed amount with cents, e.g. "- $25.00" / "+ $25.00".
+  const signed = html.match(/[-+]\s*\$\s*([\d,]+\.\d{2})/);
+  // Then any dollar amount that has explicit cents.
+  const withCents = html.match(/\$\s*([\d,]+\.\d{2})/);
+  // Last resort: any dollar figure.
+  const any = html.match(/\$\s*([\d,]+\.?\d*)/);
+  const match = signed || withCents || any;
+  if (!match) return null;
+  const value = parseFloat(match[1].replace(/,/g, ""));
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Format a matched date string as YYYY-MM-DD using local calendar components,
+ *  never round-tripping through toISOString() (which shifts the day in US TZs). */
+function extractDate(html: string): string {
+  const dateMatch = html.match(
+    /(\w+ \d{1,2},?\s*\d{4})|(\d{1,2}\/\d{1,2}\/\d{2,4})/
+  );
+  if (dateMatch) {
+    const parsed = new Date(dateMatch[0]);
+    if (!isNaN(parsed.getTime())) {
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, "0");
+      const d = String(parsed.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+  }
+  return localToday();
+}
+
 export function parseVenmoReceipt(html: string): ParsedReceipt | null {
   try {
-    // Extract amount: look for dollar amounts
-    const amountMatch = html.match(/\$\s*([\d,]+\.?\d*)/);
-    if (!amountMatch) return null;
-    const amount = parseFloat(amountMatch[1].replace(/,/g, ""));
+    const amount = extractAmount(html);
+    if (amount === null) return null;
 
-    // Extract date
-    const dateMatch = html.match(
-      /(\w+ \d{1,2},?\s*\d{4})|(\d{1,2}\/\d{1,2}\/\d{2,4})/
-    );
-    let date: string;
-    if (dateMatch) {
-      const parsed = new Date(dateMatch[0]);
-      date = isNaN(parsed.getTime())
-        ? new Date().toISOString().split("T")[0]
-        : parsed.toISOString().split("T")[0];
-    } else {
-      date = new Date().toISOString().split("T")[0];
-    }
+    const date = extractDate(html);
 
     // Extract recipient: look for "to" or "paid" patterns
     const recipientMatch =
@@ -58,15 +80,12 @@ export function parseVenmoReceipt(html: string): ParsedReceipt | null {
 
 export function parseGenericReceipt(text: string): ParsedReceipt | null {
   try {
-    const amountMatch = text.match(/\$\s*([\d,]+\.?\d*)/);
-    if (!amountMatch) return null;
-
-    const amount = parseFloat(amountMatch[1].replace(/,/g, ""));
-    const date = new Date().toISOString().split("T")[0];
+    const amount = extractAmount(text);
+    if (amount === null) return null;
 
     return {
       amount,
-      date,
+      date: localToday(),
       recipient: "Unknown",
       note: text.slice(0, 200),
       source: "email",
@@ -74,4 +93,11 @@ export function parseGenericReceipt(text: string): ParsedReceipt | null {
   } catch {
     return null;
   }
+}
+
+/** A receipt amount we trust enough to auto-create an expense from. Zero,
+ *  negative, or absurdly large values indicate a mis-parse and should be
+ *  routed to manual review instead. */
+export function isPlausibleAmount(amount: number): boolean {
+  return Number.isFinite(amount) && amount > 0 && amount <= 100000;
 }
