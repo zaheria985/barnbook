@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/queries/events";
 import type { SuggestedWindow } from "@/lib/queries/icloud-sync";
@@ -36,11 +36,14 @@ interface ICalEvent {
   location: string | null;
 }
 
+type IcalStatus = "ok" | "timeout" | "error" | "unconfigured";
+
 interface DigestData {
   upcoming_events: Event[];
   confirmed_events: Event[];
   suggested_windows: SuggestedWindow[];
   ical_events: ICalEvent[];
+  ical_status?: IcalStatus;
 }
 
 // A unified timeline item for sorting within a day
@@ -145,25 +148,36 @@ export default function WeeklyDigestPage() {
   const [icalEvents, setIcalEvents] = useState<ICalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [icalStatus, setIcalStatus] = useState<IcalStatus>("unconfigured");
+
+  const fetchDigest = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/calendar-intel/digest", {
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data: DigestData = await res.json();
+      setUnconfirmedEvents(data.upcoming_events || []);
+      setConfirmedEvents(data.confirmed_events || []);
+      setWindows(data.suggested_windows || []);
+      setIcalEvents(data.ical_events || []);
+      setIcalStatus(data.ical_status || "unconfigured");
+    } catch (err) {
+      setError(
+        err instanceof DOMException && err.name === "TimeoutError"
+          ? "The digest took too long to load."
+          : "Failed to load weekly digest"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchDigest() {
-      try {
-        const res = await fetch("/api/calendar-intel/digest");
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data: DigestData = await res.json();
-        setUnconfirmedEvents(data.upcoming_events || []);
-        setConfirmedEvents(data.confirmed_events || []);
-        setWindows(data.suggested_windows || []);
-        setIcalEvents(data.ical_events || []);
-      } catch {
-        setError("Failed to load weekly digest");
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchDigest();
-  }, []);
+  }, [fetchDigest]);
 
   // Compute the 7-day cutoff
   const sevenDayCutoff = useMemo(() => {
@@ -354,8 +368,23 @@ export default function WeeklyDigestPage() {
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
+          <button onClick={fetchDigest} className="ml-2 font-medium underline">
+            Retry
+          </button>
           <button onClick={() => setError("")} className="ml-2 font-medium underline">
             Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* iCloud degraded — the rest of the digest is still valid */}
+      {!error && (icalStatus === "timeout" || icalStatus === "error") && (
+        <div className="mb-4 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3 text-sm text-[var(--warning-text)]">
+          {icalStatus === "timeout"
+            ? "iCloud took too long to respond — showing barn events only."
+            : "Could not reach iCloud — showing barn events only."}
+          <button onClick={fetchDigest} className="ml-2 font-medium underline">
+            Retry
           </button>
         </div>
       )}

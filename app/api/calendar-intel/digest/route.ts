@@ -5,6 +5,10 @@ import pool from "@/lib/db";
 import { getSuggestedWindows, getIcloudSettings } from "@/lib/queries/icloud-sync";
 import * as caldav from "@/lib/caldav";
 import { localToday } from "@/lib/dates";
+import { withTimeout, TimeoutError } from "@/lib/with-timeout";
+
+/** iCloud is a third-party call with no timeout of its own; cap our wait. */
+const ICLOUD_TIMEOUT_MS = 10_000;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -46,15 +50,20 @@ export async function GET() {
       getSuggestedWindows(today, weekFromNow),
     ]);
 
-    // Conditionally fetch iCloud events for the 7-day window
+    // Conditionally fetch iCloud events for the 7-day window. A slow or
+    // unreachable iCloud must degrade to "no events" rather than hang the page.
     let ical_events: { uid: string; summary: string; dtstart: string; dtend: string | null; location: string | null }[] = [];
+    let ical_status: "ok" | "timeout" | "error" | "unconfigured" = "unconfigured";
     if (caldav.isConfigured()) {
       try {
         const icloudSettings = await getIcloudSettings();
         if (icloudSettings && icloudSettings.read_calendar_ids.length > 0) {
           const from = new Date(today + "T00:00:00");
           const to = new Date(sevenDaysOut + "T00:00:00");
-          const events = await caldav.fetchEvents(icloudSettings.read_calendar_ids, from, to);
+          const events = await withTimeout(
+            caldav.fetchEvents(icloudSettings.read_calendar_ids, from, to),
+            ICLOUD_TIMEOUT_MS
+          );
           ical_events = events.map(e => ({
             uid: e.uid,
             summary: e.summary,
@@ -62,8 +71,10 @@ export async function GET() {
             dtend: e.dtend,
             location: e.location,
           }));
+          ical_status = "ok";
         }
       } catch (err) {
+        ical_status = err instanceof TimeoutError ? "timeout" : "error";
         console.error("Failed to fetch iCloud events for digest:", err);
       }
     }
@@ -73,6 +84,7 @@ export async function GET() {
       confirmed_events: confirmedRes.rows,
       suggested_windows: suggestedWindows,
       ical_events,
+      ical_status,
       detection_keywords: keywordsRes.rows,
     });
   } catch (error) {
