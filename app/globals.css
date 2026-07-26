@@ -51,6 +51,18 @@
   --gait-walk: #2d8659;
   --gait-trot: #c48a2c;
   --gait-canter: #c44569;
+  /* Categorical chart series. Kept separate from the semantic --accent-* tokens
+     so chart hues can be tuned per theme without changing UI meaning. */
+  --chart-1: #6d5acd;
+  --chart-2: #c44569;
+  --chart-3: #2d9e8f;
+  --chart-4: #4a6fa5;
+  --chart-5: #2d8659;
+  --chart-6: #c48a2c;
+  --chart-7: #8b6cc1;
+  --chart-8: #e06080;
+  --chart-9: #40c4b0;
+  --chart-10: #6b92cc;
 }
 
 [data-theme="dark"] {
@@ -102,6 +114,17 @@
   --gait-walk: #40a870;
   --gait-trot: #e0a840;
   --gait-canter: #e06080;
+  /* Brightened for legibility against the dark --surface (#1e1b2e). */
+  --chart-1: #9b8ce8;
+  --chart-2: #e06080;
+  --chart-3: #40c4b0;
+  --chart-4: #6b92cc;
+  --chart-5: #40a870;
+  --chart-6: #e0a840;
+  --chart-7: #b89ae8;
+  --chart-8: #f08fa8;
+  --chart-9: #6fdcc8;
+  --chart-10: #96b8e0;
 }
 
 @layer base {

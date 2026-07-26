@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { CHART } from "@/lib/chart-colors";
 
 interface BarData {
   category: string;
@@ -72,12 +73,12 @@ export default function BudgetBarChart({
             }}
           />
           <Legend />
-          <Bar dataKey="budgeted" name="Budgeted" fill="#6d5acd" />
-          <Bar dataKey="actual" name="Actual" fill="#2d9e8f">
+          <Bar dataKey="budgeted" name="Budgeted" fill={CHART.budgeted} />
+          <Bar dataKey="actual" name="Actual" fill={CHART.actual}>
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.overBudget ? "#c44569" : "#2d9e8f"}
+                fill={entry.overBudget ? CHART.over : CHART.actual}
               />
             ))}
           </Bar>

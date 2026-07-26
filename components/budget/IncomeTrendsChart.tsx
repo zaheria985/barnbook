@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { IncomeTrend } from "@/lib/queries/income";
+import { CHART } from "@/lib/chart-colors";
 
 interface ChartData {
   label: string;
@@ -130,13 +131,13 @@ export default function IncomeTrendsChart() {
             dataKey="income"
             name="Income"
             stackId="total"
-            fill="#2d9e8f"
+            fill={CHART.income}
           />
           <Bar
             dataKey="sales"
             name="Sales"
             stackId="total"
-            fill="#6d5acd"
+            fill={CHART.sales}
           />
         </BarChart>
       </ResponsiveContainer>

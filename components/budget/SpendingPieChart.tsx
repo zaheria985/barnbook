@@ -1,25 +1,13 @@
 "use client";
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { seriesColor } from "@/lib/chart-colors";
 
 interface PieData {
   name: string;
   value: number;
   color: string;
 }
-
-const COLORS = [
-  "#6d5acd",
-  "#c44569",
-  "#2d9e8f",
-  "#4a6fa5",
-  "#2d8659",
-  "#c48a2c",
-  "#8b6cc1",
-  "#e06080",
-  "#40c4b0",
-  "#6b92cc",
-];
 
 export default function SpendingPieChart({
   data,
@@ -31,7 +19,7 @@ export default function SpendingPieChart({
     .map((d, i) => ({
       name: d.category,
       value: d.amount,
-      color: COLORS[i % COLORS.length],
+      color: seriesColor(i),
     }));
 
   if (chartData.length === 0) {
@@ -68,7 +56,6 @@ export default function SpendingPieChart({
               </text>
             )}
             outerRadius={100}
-            fill="#8884d8"
             dataKey="value"
           >
             {chartData.map((entry, index) => (
