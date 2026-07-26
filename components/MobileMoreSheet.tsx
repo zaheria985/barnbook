@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -29,11 +29,14 @@ const quickLinks = [
 ];
 
 const settingsItems = [
-  { href: "/settings?tab=account", label: "Account", icon: IconSliders },
-  { href: "/settings?tab=barn", label: "Barn", icon: IconSliders },
-  { href: "/settings?tab=budget", label: "Budget", icon: IconSliders },
-  { href: "/settings?tab=system", label: "System", icon: IconSliders },
+  { href: "/settings?tab=account", tab: "account", label: "Account", icon: IconSliders },
+  { href: "/settings?tab=barn", tab: "barn", label: "Barn", icon: IconSliders },
+  { href: "/settings?tab=budget", tab: "budget", label: "Budget", icon: IconSliders },
+  { href: "/settings?tab=system", tab: "system", label: "System", icon: IconSliders },
 ];
+
+/** Mirrors the fallback in app/settings/page.tsx. */
+const DEFAULT_SETTINGS_TAB = "account";
 
 export default function MobileMoreSheet({
   open,
@@ -44,6 +47,19 @@ export default function MobileMoreSheet({
 }) {
   const pathname = usePathname();
   const sheetRef = useRef<HTMLDivElement>(null);
+  // Which settings tab is open. Read from the URL rather than useSearchParams:
+  // this component lives in the root layout, where that hook would force a
+  // Suspense boundary onto every page. The sheet closes on navigation, so
+  // syncing when it opens is enough.
+  const [settingsTab, setSettingsTab] = useState(DEFAULT_SETTINGS_TAB);
+
+  useEffect(() => {
+    if (!open) return;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    setSettingsTab(
+      settingsItems.some((i) => i.tab === tab) ? tab! : DEFAULT_SETTINGS_TAB
+    );
+  }, [open, pathname]);
 
   useEffect(() => {
     if (open) {
@@ -103,7 +119,7 @@ export default function MobileMoreSheet({
         {/* Settings grid */}
         <div className="grid grid-cols-4 gap-1 px-4">
           {settingsItems.map((item) => {
-            const active = pathname === "/settings";
+            const active = pathname === "/settings" && item.tab === settingsTab;
             return (
               <Link
                 key={item.href}

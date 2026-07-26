@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import MonthSelector from "@/components/budget/MonthSelector";
 import ExpenseTable from "@/components/budget/ExpenseTable";
 import type { Expense } from "@/lib/queries/expenses";
@@ -14,16 +15,27 @@ function formatCurrency(n: number) {
   }).format(n);
 }
 
-export default function ExpensesPage() {
-  const [month, setMonth] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const m = params.get("month");
-      if (m && /^\d{4}-\d{2}$/.test(m)) return m;
-    }
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
+function thisMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function ExpensesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // The URL is the source of truth for the month, so the page stays linkable
+  // and the back button moves between months.
+  const monthParam = searchParams.get("month");
+  const month =
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : thisMonth();
+
+  const setMonth = useCallback(
+    (m: string) => {
+      router.replace(`/budget/expenses?month=${m}`, { scroll: false });
+    },
+    [router]
+  );
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
@@ -117,5 +129,19 @@ export default function ExpensesPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function ExpensesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-12 text-center text-[var(--text-muted)]">
+          Loading...
+        </div>
+      }
+    >
+      <ExpensesContent />
+    </Suspense>
   );
 }
