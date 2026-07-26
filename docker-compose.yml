@@ -32,6 +32,8 @@ services:
       RADICALE_URL: http://radicale:5232
       RADICALE_USER: ${RADICALE_USER:-barnbook}
       RADICALE_PASSWORD: ${RADICALE_PASSWORD}
+    volumes:
+      - barnbook_uploads:/app/public/uploads
     ports:
       - "${APP_PORT:-3500}:3500"
     healthcheck:
@@ -103,3 +105,4 @@ volumes:
   barnbook_data:
   radicale_data:
   barnbook_backups:
+  barnbook_uploads:

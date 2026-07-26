@@ -24,6 +24,15 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
+
+# Uploads live here and are backed by the barnbook_uploads volume. The directory
+# must exist with nextjs ownership in the image: Docker seeds a fresh named volume
+# from the image path, so a missing path would yield a root-owned volume the app
+# (uid 1001) cannot write to.
+RUN mkdir -p ./public/uploads/horse-photos \
+             ./public/uploads/event-attachments \
+             ./public/uploads/vet-receipts && \
+    chown -R nextjs:nodejs ./public/uploads
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/db ./db
 
