@@ -708,7 +708,7 @@ export default function HorseDetailPage() {
         <button
           type="submit"
           disabled={saving || !formName.trim() || !formFrequency}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
         >
           {saving
             ? "Saving..."
@@ -805,7 +805,7 @@ export default function HorseDetailPage() {
         href="/horses"
         className="mb-4 inline-block text-sm text-[var(--interactive)] hover:underline"
       >
-        &larr; Back to Barn Settings
+        &larr; Back to Horses
       </Link>
 
       {/* Horse header */}
@@ -889,7 +889,7 @@ export default function HorseDetailPage() {
           {!showForm && (
             <button
               onClick={() => openAddForm(id)}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]"
             >
               + Add Treatment
             </button>
@@ -920,7 +920,7 @@ export default function HorseDetailPage() {
           {!showForm && (
             <button
               onClick={() => openAddForm(null)}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]"
             >
               + Add Barn Treatment
             </button>
@@ -946,7 +946,7 @@ export default function HorseDetailPage() {
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Vet Records</h2>
-          <button onClick={openAddVet} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
+          <button onClick={openAddVet} className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]">
             + Add Record
           </button>
         </div>
@@ -1026,7 +1026,7 @@ export default function HorseDetailPage() {
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Vaccine History</h2>
-          <button onClick={openAddVaccine} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
+          <button onClick={openAddVaccine} className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]">
             + Add Vaccine
           </button>
         </div>
@@ -1074,7 +1074,7 @@ export default function HorseDetailPage() {
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Farrier Records</h2>
-          <button onClick={openAddFarrier} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
+          <button onClick={openAddFarrier} className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]">
             + Add Record
           </button>
         </div>
@@ -1137,7 +1137,7 @@ export default function HorseDetailPage() {
             <textarea value={vetNotes} onChange={(e) => setVetNotes(e.target.value)} rows={2} placeholder="Additional details..." className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]" />
           </div>
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={savingVet} className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={savingVet} className="flex-1 rounded-lg bg-[var(--interactive)] py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50">
               {savingVet ? "Saving..." : editingVetId ? "Update" : "Add Record"}
             </button>
             <button type="button" onClick={resetVetForm} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)]">Cancel</button>
@@ -1171,7 +1171,7 @@ export default function HorseDetailPage() {
             <textarea value={vaccineNotes} onChange={(e) => setVaccineNotes(e.target.value)} rows={2} placeholder="Additional details..." className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]" />
           </div>
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={savingVaccine} className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={savingVaccine} className="flex-1 rounded-lg bg-[var(--interactive)] py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50">
               {savingVaccine ? "Saving..." : editingVaccine ? "Update" : "Add Vaccine"}
             </button>
             <button type="button" onClick={resetVaccineForm} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)]">Cancel</button>
@@ -1220,7 +1220,7 @@ export default function HorseDetailPage() {
             <textarea value={farrierNotes} onChange={(e) => setFarrierNotes(e.target.value)} rows={2} placeholder="Additional details..." className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text-primary)]" />
           </div>
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={savingFarrier} className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={savingFarrier} className="flex-1 rounded-lg bg-[var(--interactive)] py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50">
               {savingFarrier ? "Saving..." : editingFarrierId ? "Update" : "Add Record"}
             </button>
             <button type="button" onClick={resetFarrierForm} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)]">Cancel</button>

@@ -405,7 +405,7 @@ export default function IntegrationsSection() {
                     <button
                       onClick={saveIcloudSettings}
                       disabled={icloudSaving}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                      className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
                     >
                       {icloudSaving ? "Saving..." : "Save"}
                     </button>
@@ -457,7 +457,7 @@ export default function IntegrationsSection() {
                   onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: false }))}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
                     !icloudSettings.use_radicale
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--interactive)] text-white"
                       : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
                   }`}
                 >
@@ -467,7 +467,7 @@ export default function IntegrationsSection() {
                   onClick={() => setIcloudSettings(prev => ({ ...prev, use_radicale: true }))}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
                     icloudSettings.use_radicale
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--interactive)] text-white"
                       : "border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
                   }`}
                 >
@@ -568,7 +568,7 @@ export default function IntegrationsSection() {
                           // Failed to create
                         }
                       }}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                      className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)]"
                     >
                       Create Lists
                     </button>
@@ -578,7 +578,7 @@ export default function IntegrationsSection() {
               <button
                 onClick={saveIcloudSettings}
                 disabled={icloudSaving}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg bg-[var(--interactive)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50"
               >
                 {icloudSaving ? "Saving..." : "Save"}
               </button>
