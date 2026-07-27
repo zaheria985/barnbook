@@ -2,7 +2,8 @@
 
 import DayCell, { type SpannedEvent } from "./DayCell";
 import type { Event } from "@/lib/queries/events";
-import { localToday } from "@/lib/dates";
+import type { ICalDisplayEvent } from "@/lib/ical-display";
+import { localToday, shiftDate } from "@/lib/dates";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -10,6 +11,7 @@ export default function MonthGrid({
   year,
   month,
   events,
+  icloudEvents = [],
   onDayClick,
   selectedDate,
   rideScores,
@@ -17,6 +19,7 @@ export default function MonthGrid({
   year: number;
   month: number; // 1-based
   events: Event[];
+  icloudEvents?: ICalDisplayEvent[];
   onDayClick: (date: string) => void;
   selectedDate: string | null;
   rideScores?: Record<string, "green" | "yellow" | "red">;
@@ -86,6 +89,23 @@ export default function MonthGrid({
     }
   }
 
+  // Group iCloud events by date, spanning multi-day ranges (endDate is
+  // already inclusive from normalizeICalEvent). Bounded to the visible month.
+  const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
+  const icloudByDate: Record<string, ICalDisplayEvent[]> = {};
+  for (const ev of icloudEvents) {
+    let cursor = ev.date;
+    let guard = 0;
+    while (cursor <= ev.endDate && guard < 62) {
+      if (cursor.startsWith(monthPrefix)) {
+        if (!icloudByDate[cursor]) icloudByDate[cursor] = [];
+        icloudByDate[cursor].push(ev);
+      }
+      cursor = shiftDate(cursor, 1);
+      guard++;
+    }
+  }
+
   const today = localToday();
 
   return (
@@ -107,6 +127,7 @@ export default function MonthGrid({
             date={cell.date}
             day={cell.day}
             events={cell.date ? eventsByDate[cell.date] || [] : []}
+            icloudEvents={cell.date ? icloudByDate[cell.date] || [] : []}
             isToday={cell.date === today}
             isSelected={cell.date === selectedDate}
             rideScore={cell.date && rideScores ? rideScores[cell.date] : undefined}

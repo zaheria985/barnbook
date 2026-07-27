@@ -1,6 +1,7 @@
 "use client";
 
 import type { Event } from "@/lib/queries/events";
+import type { ICalDisplayEvent } from "@/lib/ical-display";
 
 export type SpanPosition = "single" | "start" | "middle" | "end";
 export type SpannedEvent = Event & { spanPosition: SpanPosition };
@@ -118,10 +119,17 @@ function EventTitle({ event }: { event: SpannedEvent }) {
   );
 }
 
+const RIDE_SCORE_WORD: Record<string, string> = {
+  green: "riding good",
+  yellow: "riding caution",
+  red: "riding no-go",
+};
+
 export default function DayCell({
   date,
   day,
   events,
+  icloudEvents = [],
   isToday,
   isSelected,
   rideScore,
@@ -130,6 +138,7 @@ export default function DayCell({
   date: string | null;
   day: number | null;
   events: SpannedEvent[];
+  icloudEvents?: ICalDisplayEvent[];
   isToday: boolean;
   isSelected: boolean;
   rideScore?: "green" | "yellow" | "red" | null;
@@ -139,9 +148,35 @@ export default function DayCell({
     return <div className="min-h-[72px] bg-[var(--surface-muted)] md:min-h-[90px]" />;
   }
 
+  const totalCount = events.length + icloudEvents.length;
+  const dotBudget = 3;
+  const icloudDotCount = Math.max(
+    0,
+    Math.min(icloudEvents.length, dotBudget - events.length)
+  );
+
+  const longDate = new Date(date + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const ariaLabel = [
+    longDate,
+    rideScore ? RIDE_SCORE_WORD[rideScore] : null,
+    totalCount === 0
+      ? "no events"
+      : `${totalCount} event${totalCount === 1 ? "" : "s"}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-label={ariaLabel}
+      aria-pressed={isSelected}
+      aria-current={isToday ? "date" : undefined}
       className={`min-h-[72px] md:min-h-[90px] p-1.5 text-left transition-colors ${
         isSelected
           ? "bg-[var(--interactive-light)] ring-2 ring-[var(--interactive)] ring-inset"
@@ -157,29 +192,47 @@ export default function DayCell({
       >
         {day}
       </span>
-      {events.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-1">
-          {events.slice(0, 3).map((event, idx) => (
+      {totalCount > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          {events.slice(0, dotBudget).map((event, idx) => (
             <EventDot key={`${event.id}-${idx}`} event={event} />
           ))}
-          {events.length > 3 && (
+          {icloudEvents.slice(0, icloudDotCount).map((event) => (
+            <span
+              key={event.uid}
+              className="inline-block h-1.5 w-1.5 rounded-full border border-[var(--text-muted)] bg-transparent"
+              title={event.summary}
+            />
+          ))}
+          {totalCount > dotBudget && (
             <span className="text-[10px] text-[var(--text-muted)]">
-              +{events.length - 3}
+              +{totalCount - dotBudget}
             </span>
           )}
         </div>
       )}
-      {/* Show first event title on desktop */}
-      {events.length > 0 && (
+      {/* Show first event title on desktop; iCloud fills in when no barn events */}
+      {events.length > 0 ? (
         <div className="mt-0.5 hidden md:block">
           <EventTitle event={events[0]} />
-          {events.length > 1 && (
+          {totalCount > 1 && (
             <p className="text-[10px] text-[var(--text-muted)]">
-              +{events.length - 1} more
+              +{totalCount - 1} more
             </p>
           )}
         </div>
-      )}
+      ) : icloudEvents.length > 0 ? (
+        <div className="mt-0.5 hidden md:block">
+          <p className="truncate text-[10px] italic leading-tight text-[var(--text-muted)]">
+            {icloudEvents[0].summary}
+          </p>
+          {totalCount > 1 && (
+            <p className="text-[10px] text-[var(--text-muted)]">
+              +{totalCount - 1} more
+            </p>
+          )}
+        </div>
+      ) : null}
     </button>
   );
 }

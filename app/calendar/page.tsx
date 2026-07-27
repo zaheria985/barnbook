@@ -5,6 +5,10 @@ import Link from "next/link";
 import MonthGrid from "@/components/calendar/MonthGrid";
 import EventCard from "@/components/calendar/EventCard";
 import type { Event } from "@/lib/queries/events";
+import {
+  normalizeICalEvent,
+  type ICalDisplayEvent,
+} from "@/lib/ical-display";
 
 interface ScoredDay {
   date: string;
@@ -23,6 +27,7 @@ export default function CalendarPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [events, setEvents] = useState<Event[]>([]);
+  const [icloudEvents, setIcloudEvents] = useState<ICalDisplayEvent[]>([]);
   const [rideDays, setRideDays] = useState<ScoredDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,13 +41,26 @@ export default function CalendarPage() {
       const lastDay = new Date(year, month, 0);
       const lastDayStr = `${year}-${String(month).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`;
 
-      const [eventsRes, rideDaysRes] = await Promise.all([
+      const [eventsRes, rideDaysRes, icloudRes] = await Promise.all([
         fetch(`/api/events?from=${firstDay}&to=${lastDayStr}`),
         fetch("/api/weather/ride-days").catch(() => null),
+        // Non-fatal, like weather — the grid works without iCloud.
+        fetch(
+          `/api/calendar-intel/ical-events?from=${firstDay}&to=${lastDayStr}`
+        ).catch(() => null),
       ]);
 
       if (!eventsRes.ok) throw new Error("Failed to fetch events");
       setEvents(await eventsRes.json());
+
+      if (icloudRes && icloudRes.ok) {
+        const data = await icloudRes.json();
+        setIcloudEvents(
+          (data.events || []).map(normalizeICalEvent) as ICalDisplayEvent[]
+        );
+      } else {
+        setIcloudEvents([]);
+      }
 
       // Distinguish "weather not configured" (503) from a transient failure so
       // the user can tell the difference from simply having no forecast.
@@ -96,6 +114,12 @@ export default function CalendarPage() {
         const end = e.end_date ? e.end_date.split("T")[0] : start;
         return start <= selectedDate && end >= selectedDate;
       })
+    : [];
+
+  const selectedIcloudEvents = selectedDate
+    ? icloudEvents.filter(
+        (e) => e.date <= selectedDate && e.endDate >= selectedDate
+      )
     : [];
 
   // Build ride score map for the grid
@@ -206,6 +230,7 @@ export default function CalendarPage() {
       <div className="mb-4 flex items-center justify-center gap-4 rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-2">
         <button
           onClick={prevMonth}
+          aria-label="Previous month"
           className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -215,6 +240,7 @@ export default function CalendarPage() {
         </span>
         <button
           onClick={nextMonth}
+          aria-label="Next month"
           className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -233,23 +259,28 @@ export default function CalendarPage() {
             Caution
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-[var(--error-text)] bg-[var(--error-bg)]" />
+            <span className="inline-block h-2 w-2 rounded-sm border-l-2 border-l-[var(--error-text)] bg-[var(--error-bg)]" aria-hidden="true" />
             No-Go
           </span>
+          {icloudEvents.length > 0 && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full border border-[var(--text-muted)] bg-transparent" aria-hidden="true" />
+              iCloud
+            </span>
+          )}
         </div>
       )}
 
       {/* Calendar Grid */}
       {loading ? (
-        <div className="py-12 text-center text-[var(--text-muted)]">
-          Loading calendar...
-        </div>
+        <div className="h-[480px] animate-pulse rounded-2xl border border-[var(--border-light)] bg-[var(--surface-muted)]" />
       ) : (
         <div className="rounded-2xl border border-[var(--border-light)] overflow-hidden">
           <MonthGrid
             year={year}
             month={month}
             events={events}
+            icloudEvents={icloudEvents}
             selectedDate={selectedDate}
             rideScores={rideScores}
             onDayClick={(date) =>
@@ -277,7 +308,7 @@ export default function CalendarPage() {
               + Add Event
             </Link>
           </div>
-          {selectedEvents.length === 0 ? (
+          {selectedEvents.length === 0 && selectedIcloudEvents.length === 0 ? (
             <p className="rounded-lg border border-dashed border-[var(--border)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
               No events on this day
             </p>
@@ -286,6 +317,33 @@ export default function CalendarPage() {
               {selectedEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
+              {selectedIcloudEvents.length > 0 && (
+                <div className="rounded-lg border border-[var(--border-light)] bg-[var(--surface)] px-4 py-3">
+                  <p className="mb-2 text-xs font-medium text-[var(--text-muted)]">
+                    From iCloud
+                  </p>
+                  <div className="space-y-1.5">
+                    {selectedIcloudEvents.map((ev) => (
+                      <div
+                        key={ev.uid}
+                        className="flex items-baseline gap-2 text-sm"
+                      >
+                        <span className="w-16 shrink-0 text-xs text-[var(--text-muted)]">
+                          {ev.time ?? "All day"}
+                        </span>
+                        <span className="text-[var(--text-secondary)]">
+                          {ev.summary}
+                        </span>
+                        {ev.location && (
+                          <span className="truncate text-xs text-[var(--text-muted)]">
+                            &bull; {ev.location}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
