@@ -7,6 +7,12 @@ import type { SuggestedWindow } from "@/lib/queries/icloud-sync";
 import { localToday } from "@/lib/dates";
 import { SkeletonCard } from "@/components/ui/PageSkeleton";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
+import {
+  formatTime12h,
+  toDateKey,
+  parseSortTime,
+  displayTimeFromIcal,
+} from "@/lib/ical-display";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   show: "Show",
@@ -61,14 +67,6 @@ interface DayBucket {
   bestScore: string | null; // best weather score for this day's windows
 }
 
-function formatTime12h(time: string): string {
-  const [h, m] = time.split(":");
-  const hour = parseInt(h, 10);
-  const suffix = hour >= 12 ? "PM" : "AM";
-  const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return m === "00" ? `${display} ${suffix}` : `${display}:${m} ${suffix}`;
-}
-
 function scoreColor(score: string): string {
   if (score === "green") return "bg-[var(--success-text)]";
   if (score === "yellow") return "bg-[var(--warning-text)]";
@@ -79,50 +77,6 @@ function scoreBorderColor(score: string): string {
   if (score === "green") return "border-[var(--success-text)]";
   if (score === "yellow") return "border-[var(--warning-text)]";
   return "border-[var(--error-text)]";
-}
-
-/** Parse a date string to YYYY-MM-DD, handling postgres ISO and iCal formats */
-function toDateKey(dateStr: string): string {
-  // Already YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-  // ISO with T: "2026-02-22T12:00:00.000Z" or "2026-02-22T14:30:00Z"
-  if (dateStr.includes("T")) return dateStr.split("T")[0];
-  return dateStr;
-}
-
-/** Get a sort-friendly time value (minutes from midnight) from various formats */
-function parseSortTime(timeStr: string | null, dateStr: string): number {
-  if (timeStr) {
-    // HH:MM or HH:MM:SS
-    const parts = timeStr.split(":");
-    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-  }
-  // Try to extract time from ISO datetime
-  if (dateStr.includes("T")) {
-    const timePart = dateStr.split("T")[1];
-    if (timePart) {
-      const parts = timePart.replace("Z", "").split(":");
-      if (parts.length >= 2) {
-        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-      }
-    }
-  }
-  // All-day event, sort at start of day
-  return 0;
-}
-
-/** Format a datetime/date string into a display time, or "All day" */
-function displayTimeFromIcal(dtstart: string): string {
-  // Pure date (no time component): "2026-02-22"
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dtstart)) return "All day";
-  if (dtstart.includes("T")) {
-    const timePart = dtstart.split("T")[1];
-    if (timePart) {
-      const hhmm = timePart.replace("Z", "").substring(0, 5); // "14:30"
-      return formatTime12h(hhmm);
-    }
-  }
-  return "All day";
 }
 
 function formatDayHeader(dateStr: string): string {

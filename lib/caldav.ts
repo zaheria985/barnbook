@@ -187,18 +187,23 @@ export async function fetchEvents(
     calendarIds.includes(c.url)
   );
 
+  // Calendars are independent — fetch them concurrently. Serially this was
+  // the digest's dominant cost with several calendars selected.
+  const perCalendar = await Promise.all(
+    selected.map((cal) =>
+      client.fetchCalendarObjects({
+        calendar: cal,
+        timeRange: {
+          start: from.toISOString(),
+          end: to.toISOString(),
+        },
+      })
+    )
+  );
+
   const allEvents: CalendarEvent[] = [];
-
-  for (const cal of selected) {
-    const objects: DAVObject[] = await client.fetchCalendarObjects({
-      calendar: cal,
-      timeRange: {
-        start: from.toISOString(),
-        end: to.toISOString(),
-      },
-    });
-
-    for (const obj of objects) {
+  for (const objects of perCalendar) {
+    for (const obj of objects as DAVObject[]) {
       if (obj.data) {
         const events = parseVEvents(obj.data as string);
         allEvents.push(...events);
@@ -220,14 +225,13 @@ export async function fetchReminders(
     calendarIds.includes(c.url)
   );
 
+  const perCalendar = await Promise.all(
+    selected.map((cal) => client.fetchCalendarObjects({ calendar: cal }))
+  );
+
   const allReminders: CalendarReminder[] = [];
-
-  for (const cal of selected) {
-    const objects: DAVObject[] = await client.fetchCalendarObjects({
-      calendar: cal,
-    });
-
-    for (const obj of objects) {
+  for (const objects of perCalendar) {
+    for (const obj of objects as DAVObject[]) {
       if (obj.data) {
         const reminders = parseVTodos(obj.data as string);
         allReminders.push(
