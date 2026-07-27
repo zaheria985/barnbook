@@ -25,16 +25,62 @@ type EditFields = Partial<{
   sub_item_id: string;
 }>;
 
+export interface ExpenseSort {
+  key: "date" | "vendor" | "amount" | "category";
+  dir: "asc" | "desc";
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSortChange,
+  className = "",
+}: {
+  label: string;
+  sortKey: ExpenseSort["key"];
+  sort: ExpenseSort | null;
+  onSortChange: (s: ExpenseSort) => void;
+  className?: string;
+}) {
+  const active = sort?.key === sortKey;
+  const nextDir: ExpenseSort["dir"] =
+    active && sort!.dir === "asc" ? "desc" : "asc";
+  return (
+    <th
+      className={`pb-2 pr-2 font-medium ${className}`}
+      aria-sort={
+        active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSortChange({ key: sortKey, dir: nextDir })}
+        className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]"
+      >
+        {label}
+        <span aria-hidden="true" className="text-[10px]">
+          {active ? (sort!.dir === "asc" ? "▲" : "▼") : ""}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 export default function ExpenseTable({
   expenses,
   categories,
   showCategory = false,
   onChanged,
+  sort = null,
+  onSortChange,
 }: {
   expenses: Expense[];
   categories: BudgetCategory[];
   showCategory?: boolean;
   onChanged: () => void;
+  sort?: ExpenseSort | null;
+  onSortChange?: (s: ExpenseSort) => void;
 }) {
   const [pendingEdits, setPendingEdits] = useState<Record<string, EditFields>>(
     {}
@@ -266,11 +312,24 @@ export default function ExpenseTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border-light)] text-left text-xs text-[var(--text-muted)]">
-              <th className="pb-2 pr-2 font-medium">Date</th>
-              <th className="pb-2 pr-2 font-medium">Vendor</th>
-              <th className="pb-2 pr-2 font-medium text-right">Amount</th>
-              {showCategory && (
-                <th className="pb-2 pr-2 font-medium">Category</th>
+              {onSortChange ? (
+                <>
+                  <SortableHeader label="Date" sortKey="date" sort={sort} onSortChange={onSortChange} />
+                  <SortableHeader label="Vendor" sortKey="vendor" sort={sort} onSortChange={onSortChange} />
+                  <SortableHeader label="Amount" sortKey="amount" sort={sort} onSortChange={onSortChange} className="text-right" />
+                  {showCategory && (
+                    <SortableHeader label="Category" sortKey="category" sort={sort} onSortChange={onSortChange} />
+                  )}
+                </>
+              ) : (
+                <>
+                  <th className="pb-2 pr-2 font-medium">Date</th>
+                  <th className="pb-2 pr-2 font-medium">Vendor</th>
+                  <th className="pb-2 pr-2 font-medium text-right">Amount</th>
+                  {showCategory && (
+                    <th className="pb-2 pr-2 font-medium">Category</th>
+                  )}
+                </>
               )}
               <th className="pb-2 pr-2 font-medium">Sub-Item</th>
               <th className="pb-2 pr-2 font-medium">Notes</th>
