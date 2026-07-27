@@ -5,6 +5,7 @@ import {
   getExpenses,
   createExpense,
   getVendorSuggestions,
+  getVendorlessExpenses,
 } from "@/lib/queries/expenses";
 import { isMonthClosed } from "@/lib/queries/monthly-budgets";
 
@@ -17,6 +18,18 @@ export async function GET(request: NextRequest) {
   const month = request.nextUrl.searchParams.get("month");
   const categoryId = request.nextUrl.searchParams.get("category") || undefined;
   const vendorQuery = request.nextUrl.searchParams.get("vendor_suggest");
+
+  if (request.nextUrl.searchParams.get("vendorless") === "1") {
+    try {
+      return NextResponse.json(await getVendorlessExpenses());
+    } catch (error) {
+      console.error("Failed to fetch vendorless expenses:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch vendorless expenses" },
+        { status: 500 }
+      );
+    }
+  }
 
   if (vendorQuery) {
     try {

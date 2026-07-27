@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import MonthSelector from "@/components/budget/MonthSelector";
+import VendorBackfill from "@/components/budget/VendorBackfill";
 
 interface VendorSpending {
   vendor: string;
@@ -72,8 +73,14 @@ export default function VendorSpendingPage() {
         </div>
       )}
 
+      <VendorBackfill onChanged={fetchData} />
+
       {loading ? (
-        <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
+        <div className="animate-pulse space-y-3 py-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-10 rounded-lg bg-[var(--surface-muted)]" />
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
           No vendor expenses found for this period.

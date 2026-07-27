@@ -188,3 +188,33 @@ export async function getVendorSuggestions(query: string): Promise<string[]> {
   );
   return res.rows.map((r) => r.vendor);
 }
+
+/** An expense with no vendor set, for the backfill tool on the Vendors page. */
+export interface VendorlessExpense {
+  id: string;
+  date: string;
+  amount: number;
+  category_name: string;
+  sub_item_label: string | null;
+  notes: string | null;
+}
+
+export async function getVendorlessExpenses(): Promise<VendorlessExpense[]> {
+  const res = await pool.query(
+    `SELECT e.id, e.date, e.amount, c.name AS category_name,
+            s.label AS sub_item_label, e.notes
+     FROM expenses e
+     LEFT JOIN budget_categories c ON c.id = e.category_id
+     LEFT JOIN budget_category_sub_items s ON s.id = e.sub_item_id
+     WHERE e.vendor IS NULL OR e.vendor = ''
+     ORDER BY c.name NULLS LAST, e.notes NULLS LAST, e.date DESC`
+  );
+  return res.rows.map((r) => ({
+    id: r.id,
+    date: typeof r.date === "string" ? r.date : r.date.toISOString().split("T")[0],
+    amount: Number(r.amount),
+    category_name: r.category_name ?? "Uncategorized",
+    sub_item_label: r.sub_item_label,
+    notes: r.notes,
+  }));
+}
