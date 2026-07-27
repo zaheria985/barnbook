@@ -5,6 +5,20 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Horse } from "@/lib/queries/horses";
 
+function ageYears(dob: string | null): string | null {
+  if (!dob) return null;
+  const d = new Date(dob.split("T")[0] + "T12:00:00");
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  if (
+    now.getMonth() < d.getMonth() ||
+    (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())
+  ) {
+    age--;
+  }
+  return `${age} yrs`;
+}
+
 export default function HorsesPage() {
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +89,12 @@ export default function HorsesPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-[var(--text-primary)]">{horse.name}</p>
                 <p className="text-sm text-[var(--text-muted)]">
-                  {[horse.breed, horse.color, horse.weight_lbs ? `${horse.weight_lbs} lbs` : null]
+                  {[
+                    horse.breed,
+                    horse.color,
+                    ageYears(horse.date_of_birth),
+                    horse.weight_lbs ? `${horse.weight_lbs} lbs` : null,
+                  ]
                     .filter(Boolean)
                     .join(" · ") || "View records"}
                 </p>

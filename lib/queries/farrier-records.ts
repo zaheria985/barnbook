@@ -10,8 +10,18 @@ export interface FarrierRecord {
   findings: string | null;
   notes: string | null;
   cost: number | null;
+  expense_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A Farrier Care expense for this horse with no farrier record yet. */
+export interface UnlinkedFarrierExpense {
+  id: string;
+  date: string;
+  amount: number;
+  vendor: string | null;
+  notes: string | null;
 }
 
 function dateOnly(v: unknown): string | null {
@@ -30,7 +40,7 @@ function serializeDates(row: Record<string, unknown>): FarrierRecord {
 
 export async function getFarrierRecords(horseId: string): Promise<FarrierRecord[]> {
   const res = await pool.query(
-    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at
+    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, expense_id, created_at, updated_at
      FROM farrier_records
      WHERE horse_id = $1
      ORDER BY visit_date DESC`,
@@ -41,7 +51,7 @@ export async function getFarrierRecords(horseId: string): Promise<FarrierRecord[
 
 export async function getFarrierRecord(id: string): Promise<FarrierRecord | null> {
   const res = await pool.query(
-    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at
+    `SELECT id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, expense_id, created_at, updated_at
      FROM farrier_records
      WHERE id = $1`,
     [id]
@@ -59,11 +69,12 @@ export async function createFarrierRecord(data: {
   findings?: string | null;
   notes?: string | null;
   cost?: number | null;
+  expense_id?: string | null;
 }): Promise<FarrierRecord> {
   const res = await pool.query(
-    `INSERT INTO farrier_records (horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
+    `INSERT INTO farrier_records (horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, expense_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, expense_id, created_at, updated_at`,
     [
       data.horse_id,
       data.visit_date,
@@ -73,6 +84,7 @@ export async function createFarrierRecord(data: {
       data.findings ?? null,
       data.notes ?? null,
       data.cost ?? null,
+      data.expense_id ?? null,
     ]
   );
   return serializeDates(res.rows[0]);
@@ -130,7 +142,7 @@ export async function updateFarrierRecord(
 
   const res = await pool.query(
     `UPDATE farrier_records SET ${fields.join(", ")} WHERE id = $${idx}
-     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, created_at, updated_at`,
+     RETURNING id, horse_id, visit_date, next_due_date, provider, service_type, findings, notes, cost, expense_id, created_at, updated_at`,
     values
   );
 
@@ -141,4 +153,35 @@ export async function updateFarrierRecord(
 export async function deleteFarrierRecord(id: string): Promise<boolean> {
   const res = await pool.query(`DELETE FROM farrier_records WHERE id = $1`, [id]);
   return (res.rowCount ?? 0) > 0;
+}
+
+/**
+ * Farrier Care expenses attributable to this horse (via the sub-item's
+ * horse_id) that no farrier record links to yet — feeds the "create a record
+ * from this expense?" prompt on the horse page.
+ */
+export async function getUnlinkedFarrierExpenses(
+  horseId: string
+): Promise<UnlinkedFarrierExpense[]> {
+  const res = await pool.query(
+    `SELECT e.id, e.date, e.amount, e.vendor, e.notes
+     FROM expenses e
+     JOIN budget_categories c ON c.id = e.category_id
+     JOIN budget_category_sub_items s ON s.id = e.sub_item_id
+     WHERE c.name = 'Farrier Care'
+       AND s.horse_id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM farrier_records fr WHERE fr.expense_id = e.id
+       )
+     ORDER BY e.date DESC
+     LIMIT 10`,
+    [horseId]
+  );
+  return res.rows.map((r) => ({
+    id: r.id,
+    date: dateOnly(r.date)!,
+    amount: Number(r.amount),
+    vendor: r.vendor,
+    notes: r.notes,
+  }));
 }

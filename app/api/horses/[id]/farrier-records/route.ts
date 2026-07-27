@@ -4,10 +4,11 @@ import { authOptions } from "@/lib/auth";
 import {
   getFarrierRecords,
   createFarrierRecord,
+  getUnlinkedFarrierExpenses,
 } from "@/lib/queries/farrier-records";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
@@ -17,6 +18,9 @@ export async function GET(
 
   try {
     const { id } = await params;
+    if (request.nextUrl.searchParams.get("unlinked_expenses") === "1") {
+      return NextResponse.json(await getUnlinkedFarrierExpenses(id));
+    }
     const records = await getFarrierRecords(id);
     return NextResponse.json(records);
   } catch (error) {
@@ -57,6 +61,7 @@ export async function POST(
       findings: body.findings?.trim() || null,
       notes: body.notes?.trim() || null,
       cost: body.cost != null ? Number(body.cost) : null,
+      expense_id: body.expense_id || null,
     });
 
     return NextResponse.json(record, { status: 201 });

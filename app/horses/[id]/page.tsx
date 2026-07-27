@@ -183,16 +183,22 @@ export default function HorseDetailPage() {
   const [farrierNotes, setFarrierNotes] = useState("");
   const [farrierCost, setFarrierCost] = useState("");
   const [savingFarrier, setSavingFarrier] = useState(false);
+  // Farrier Care expenses with no record yet ("create record from expense" prompt)
+  const [unlinkedExpenses, setUnlinkedExpenses] = useState<
+    { id: string; date: string; amount: number; vendor: string | null; notes: string | null }[]
+  >([]);
+  const [farrierExpenseId, setFarrierExpenseId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [horsesRes, schedulesRes, barnRes, vetRes, vaccinesRes, farrierRes] = await Promise.all([
+      const [horsesRes, schedulesRes, barnRes, vetRes, vaccinesRes, farrierRes, unlinkedRes] = await Promise.all([
         fetch("/api/horses"),
         fetch(`/api/treatments?horse_id=${id}`),
         fetch("/api/treatments"),
         fetch(`/api/horses/${id}/vet-records`),
         fetch(`/api/horses/${id}/vaccines`),
         fetch(`/api/horses/${id}/farrier-records`),
+        fetch(`/api/horses/${id}/farrier-records?unlinked_expenses=1`),
       ]);
 
       if (!horsesRes.ok) throw new Error("Failed to fetch horses");
@@ -237,6 +243,7 @@ export default function HorseDetailPage() {
       }
       if (vaccinesRes.ok) setVaccines(await vaccinesRes.json());
       if (farrierRes.ok) setFarrierRecords(await farrierRes.json());
+      if (unlinkedRes.ok) setUnlinkedExpenses(await unlinkedRes.json());
     } catch {
       setError("Failed to load data");
     } finally {
@@ -529,6 +536,21 @@ export default function HorseDetailPage() {
   }
   function openAddFarrier() {
     resetFarrierForm();
+    setFarrierExpenseId(null);
+    setShowFarrierModal(true);
+  }
+  /** Open the farrier modal prefilled from a Farrier Care expense. */
+  function openFarrierFromExpense(exp: {
+    id: string;
+    date: string;
+    amount: number;
+    vendor: string | null;
+  }) {
+    resetFarrierForm();
+    setFarrierVisitDate(exp.date);
+    setFarrierCost(String(exp.amount));
+    setFarrierProvider(exp.vendor || "");
+    setFarrierExpenseId(exp.id);
     setShowFarrierModal(true);
   }
   function openEditFarrier(r: FarrierRecord) {
@@ -554,6 +576,7 @@ export default function HorseDetailPage() {
         findings: farrierFindings.trim() || null,
         notes: farrierNotes.trim() || null,
         cost: farrierCost ? Number(farrierCost) : null,
+        expense_id: editingFarrierId ? undefined : farrierExpenseId,
       };
       const url = editingFarrierId
         ? `/api/horses/${id}/farrier-records/${editingFarrierId}`
@@ -870,6 +893,32 @@ export default function HorseDetailPage() {
         </div>
       </div>
 
+      {/* Care summary */}
+      {(farrierRecords.length > 0 || vetRecords.length > 0) && (
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {farrierRecords.length > 0 && (
+            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-3 text-sm">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Farrier</p>
+              <p className="text-[var(--text-secondary)]">
+                Last {formatDate(farrierRecords[0].visit_date)}
+                {farrierRecords[0].next_due_date && (
+                  <> &middot; next due {formatDate(farrierRecords[0].next_due_date)}</>
+                )}
+              </p>
+            </div>
+          )}
+          {vetRecords.length > 0 && (
+            <div className="rounded-xl border border-[var(--border-light)] bg-[var(--surface)] px-4 py-3 text-sm">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Vet</p>
+              <p className="text-[var(--text-secondary)]">
+                Last {formatDate(vetRecords[0].visit_date.split("T")[0])}
+                {vetRecords[0].reason && <> &middot; {vetRecords[0].reason}</>}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 rounded-lg border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-sm text-[var(--error-text)]">
           {error}
@@ -1080,6 +1129,33 @@ export default function HorseDetailPage() {
             + Add Record
           </button>
         </div>
+        {unlinkedExpenses.length > 0 && (
+          <div className="mb-3 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3">
+            <p className="mb-2 text-sm font-medium text-[var(--warning-text)]">
+              {unlinkedExpenses.length} farrier expense
+              {unlinkedExpenses.length === 1 ? "" : "s"} without a record
+            </p>
+            <div className="space-y-1.5">
+              {unlinkedExpenses.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="flex items-center justify-between gap-2 text-sm text-[var(--warning-text)]"
+                >
+                  <span className="min-w-0 truncate">
+                    {formatDate(exp.date)} &middot; {formatCost(exp.amount)}
+                    {exp.vendor && <> &middot; {exp.vendor}</>}
+                  </span>
+                  <button
+                    onClick={() => openFarrierFromExpense(exp)}
+                    className="shrink-0 rounded-lg border border-[var(--warning-text)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--warning-solid)] hover:text-white transition-colors"
+                  >
+                    Create record
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {farrierRecords.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--border)] p-6 text-center">
             <p className="text-sm text-[var(--text-muted)]">No farrier records yet.</p>
