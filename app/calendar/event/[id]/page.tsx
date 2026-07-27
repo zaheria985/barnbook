@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import ChecklistView from "@/components/calendar/ChecklistView";
 import type { Event } from "@/lib/queries/events";
@@ -279,12 +280,20 @@ export default function EventDetailPage() {
               )}
             </div>
           </div>
-          <button
-            onClick={handleDelete}
-            className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--error-text)] hover:bg-[var(--error-bg)] transition-colors"
-          >
-            Delete
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href={`/calendar/event?edit=${event.id}`}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] transition-colors"
+            >
+              Edit
+            </Link>
+            <button
+              onClick={handleDelete}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--error-text)] hover:bg-[var(--error-bg)] transition-colors"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 

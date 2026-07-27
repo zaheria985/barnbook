@@ -22,10 +22,16 @@ export default function NewEventPageWrapper() {
   );
 }
 
+/** Prefill a date input from an API date like "2026-02-21T00:00:00.000Z". */
+function toDateInput(value: string | null): string {
+  return value ? String(value).split("T")[0] : "";
+}
+
 function NewEventPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillDate = searchParams.get("date") || "";
+  const editId = searchParams.get("edit");
 
   const [title, setTitle] = useState("");
   const [eventType, setEventType] = useState("other");
@@ -39,6 +45,10 @@ function NewEventPage() {
   const [recurrenceRule, setRecurrenceRule] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Edit mode
+  const [loadingEvent, setLoadingEvent] = useState(!!editId);
+  const [isRecurringParent, setIsRecurringParent] = useState(false);
+  const [updateFuture, setUpdateFuture] = useState(false);
 
   useEffect(() => {
     fetch("/api/templates")
@@ -46,6 +56,30 @@ function NewEventPage() {
       .then(setTemplates)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!editId) return;
+    fetch(`/api/events/${editId}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("not found");
+        return r.json();
+      })
+      .then((ev) => {
+        setTitle(ev.title || "");
+        setEventType(ev.event_type || "other");
+        setStartDate(toDateInput(ev.start_date));
+        setEndDate(toDateInput(ev.end_date));
+        setLocation(ev.location || "");
+        setEntryDueDate(toDateInput(ev.entry_due_date));
+        setNotes(ev.notes || "");
+        setRecurrenceRule(
+          typeof ev.recurrence_rule === "string" ? ev.recurrence_rule : ""
+        );
+        setIsRecurringParent(!!ev.recurrence_rule && !ev.is_recurring_instance);
+      })
+      .catch(() => setError("Failed to load event"))
+      .finally(() => setLoadingEvent(false));
+  }, [editId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,6 +89,26 @@ function NewEventPage() {
     setError("");
 
     try {
+      if (editId) {
+        const qs = updateFuture ? "?updateFuture=true" : "";
+        const res = await fetch(`/api/events/${editId}${qs}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: title.trim(),
+            event_type: eventType,
+            start_date: startDate,
+            end_date: endDate || null,
+            location: location.trim() || null,
+            entry_due_date: entryDueDate || null,
+            notes: notes.trim() || null,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to save event");
+        router.push(`/calendar/event/${editId}`);
+        return;
+      }
+
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +139,7 @@ function NewEventPage() {
 
       router.push(`/calendar/event/${event.id}`);
     } catch {
-      setError("Failed to create event");
+      setError(editId ? "Failed to save event" : "Failed to create event");
     } finally {
       setSaving(false);
     }
@@ -95,14 +149,22 @@ function NewEventPage() {
     (t) => t.event_type === eventType
   );
 
+  if (loadingEvent) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="h-96 animate-pulse rounded-2xl border border-[var(--border-light)] bg-[var(--surface-muted)]" />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          New Event
+          {editId ? "Edit Event" : "New Event"}
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Add an event to your calendar
+          {editId ? "Update this event" : "Add an event to your calendar"}
         </p>
       </div>
 
@@ -175,27 +237,47 @@ function NewEventPage() {
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
-              Repeat
+          {!editId && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                Repeat
+              </label>
+              <select
+                value={recurrenceRule}
+                onChange={(e) => setRecurrenceRule(e.target.value)}
+                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+              >
+                <option value="">None</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+              {recurrenceRule && (
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Future events will be created automatically
+                </p>
+              )}
+            </div>
+          )}
+
+          {editId && isRecurringParent && (
+            <label className="flex items-start gap-2 rounded-lg border border-[var(--border-light)] bg-[var(--surface-muted)] px-3 py-2">
+              <input
+                type="checkbox"
+                checked={updateFuture}
+                onChange={(e) => setUpdateFuture(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="text-sm text-[var(--text-secondary)]">
+                Apply changes to future occurrences
+                <span className="block text-xs text-[var(--text-muted)]">
+                  Title, type, location, and notes carry over; dates stay per
+                  occurrence.
+                </span>
+              </span>
             </label>
-            <select
-              value={recurrenceRule}
-              onChange={(e) => setRecurrenceRule(e.target.value)}
-              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
-            >
-              <option value="">None</option>
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-            {recurrenceRule && (
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
-                Future events will be created automatically
-              </p>
-            )}
-          </div>
+          )}
 
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
@@ -239,8 +321,8 @@ function NewEventPage() {
           </div>
         </div>
 
-        {/* Template Selection */}
-        {matchingTemplates.length > 0 && (
+        {/* Template Selection (create only — checklists are managed on the event page) */}
+        {!editId && matchingTemplates.length > 0 && (
           <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
               Checklist Template
@@ -277,7 +359,11 @@ function NewEventPage() {
             disabled={saving || !title.trim() || !startDate}
             className="flex-1 rounded-lg bg-[var(--interactive)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--interactive-hover)] disabled:opacity-50 transition-colors"
           >
-            {saving ? "Creating..." : "Create Event"}
+            {saving
+              ? "Saving..."
+              : editId
+                ? "Save Changes"
+                : "Create Event"}
           </button>
         </div>
       </form>
