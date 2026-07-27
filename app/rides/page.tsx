@@ -189,6 +189,7 @@ export default function RideLogPage() {
       {/* FAB */}
       <Link
         href="/rides/entry"
+        aria-label="Log ride"
         className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--interactive)] text-white shadow-lg hover:bg-[var(--interactive-hover)] md:bottom-8"
       >
         <svg
