@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type {
+import { useConfirm } from "@/components/ui/ConfirmDialog";
   BudgetCategory,
   SubItem,
 } from "@/lib/queries/budget-categories";
 
 export default function CategoriesSection() {
+  const { confirm, confirmElement } = useConfirm();
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -87,7 +89,7 @@ export default function CategoriesSection() {
   }
 
   async function handleDeleteCategory(id: string, name: string) {
-    if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
+    if (!(await confirm(`Delete category "${name}"? This cannot be undone.`))) return;
     try {
       const res = await fetch(`/api/budget/categories/${id}`, {
         method: "DELETE",
@@ -180,7 +182,7 @@ export default function CategoriesSection() {
     subItemId: string,
     label: string
   ) {
-    if (!confirm(`Delete sub-item "${label}"?`)) return;
+    if (!(await confirm(`Delete sub-item "${label}"?`))) return;
     try {
       const res = await fetch(
         `/api/budget/categories/${categoryId}/sub-items/${subItemId}`,
@@ -506,6 +508,7 @@ export default function CategoriesSection() {
           </div>
         ))}
       </div>
+      {confirmElement}
     </>
   );
 }

@@ -7,6 +7,7 @@ import IncomeCategoryManager from "@/components/settings/IncomeCategoryManager";
 import IncomeTrendsChart from "@/components/budget/IncomeTrendsChart";
 import Modal from "@/components/ui/Modal";
 import { localToday } from "@/lib/dates";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -66,6 +67,7 @@ function editKey(categoryId: string, subItemId: string | null): string {
 }
 
 export default function IncomePage() {
+  const { confirm, confirmElement } = useConfirm();
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -227,7 +229,7 @@ export default function IncomePage() {
   }
 
   async function handleDeleteSale(id: string, description: string) {
-    if (!confirm(`Delete sale "${description}"?`)) return;
+    if (!(await confirm(`Delete sale "${description}"?`))) return;
     try {
       const res = await fetch(`/api/sales/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -537,6 +539,7 @@ export default function IncomePage() {
       <Modal open={showCategoryManager} onClose={() => setShowCategoryManager(false)} title="Manage Income Categories">
         <IncomeCategoryManager />
       </Modal>
+      {confirmElement}
     </div>
   );
 }

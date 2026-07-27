@@ -28,13 +28,11 @@ type EditFields = Partial<{
 export default function ExpenseTable({
   expenses,
   categories,
-  readOnly = false,
   showCategory = false,
   onChanged,
 }: {
   expenses: Expense[];
   categories: BudgetCategory[];
-  readOnly?: boolean;
   showCategory?: boolean;
   onChanged: () => void;
 }) {
@@ -242,10 +240,12 @@ export default function ExpenseTable({
     );
   }
 
+  // Cells are always editable; a resting border keeps that discoverable
+  // (fully transparent inputs read as static text).
   const inputClass =
-    "w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-[var(--text-primary)] hover:border-[var(--border-light)] focus:border-[var(--input-focus-ring)] focus:bg-[var(--input-bg)] focus:outline-none transition-colors";
+    "w-full rounded border border-[var(--border-light)] bg-[var(--input-bg)] px-1.5 py-1 text-sm text-[var(--text-primary)] hover:border-[var(--border)] focus:border-[var(--input-focus-ring)] focus:outline-none transition-colors";
   const selectClass =
-    "w-full rounded border border-transparent bg-transparent px-1 py-1 text-sm text-[var(--text-primary)] hover:border-[var(--border-light)] focus:border-[var(--input-focus-ring)] focus:bg-[var(--input-bg)] focus:outline-none transition-colors appearance-none cursor-pointer";
+    "w-full rounded border border-[var(--border-light)] bg-[var(--input-bg)] px-1 py-1 text-sm text-[var(--text-primary)] hover:border-[var(--border)] focus:border-[var(--input-focus-ring)] focus:outline-none transition-colors appearance-none cursor-pointer";
 
   return (
     <div>
@@ -274,7 +274,7 @@ export default function ExpenseTable({
               )}
               <th className="pb-2 pr-2 font-medium">Sub-Item</th>
               <th className="pb-2 pr-2 font-medium">Notes</th>
-              {!readOnly && <th className="pb-2 font-medium w-16"></th>}
+              <th className="pb-2 font-medium w-16"></th>
             </tr>
           </thead>
           <tbody>
@@ -284,115 +284,84 @@ export default function ExpenseTable({
                 className="border-b border-[var(--border-light)] last:border-0"
               >
                 <td className="py-1.5 pr-2">
-                  {readOnly ? (
-                    <span className="text-sm">{formatDate(exp.date)}</span>
-                  ) : (
-                    <input
-                      type="date"
-                      value={getEditValue(exp, "date")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "date", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "date")}
-                      className={`${inputClass} w-28`}
-                    />
-                  )}
+                  <input
+                    type="date"
+                    value={getEditValue(exp, "date")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "date", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "date")}
+                    className={`${inputClass} w-28`}
+                  />
                 </td>
                 <td className="py-1.5 pr-2">
-                  {readOnly ? (
-                    <span className="text-sm">{exp.vendor || "—"}</span>
-                  ) : (
-                    <input
-                      type="text"
-                      value={getEditValue(exp, "vendor")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "vendor", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "vendor")}
-                      placeholder="—"
-                      className={`${inputClass} w-32`}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    value={getEditValue(exp, "vendor")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "vendor", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "vendor")}
+                    placeholder="—"
+                    className={`${inputClass} w-32`}
+                  />
                 </td>
                 <td className="py-1.5 pr-2 text-right">
-                  {readOnly ? (
-                    <span className="text-sm font-medium">
-                      {formatCurrency(Number(exp.amount))}
-                    </span>
-                  ) : (
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={getEditValue(exp, "amount")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "amount", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "amount")}
-                      className={`${inputClass} w-24 text-right`}
-                    />
-                  )}
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={getEditValue(exp, "amount")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "amount", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "amount")}
+                    className={`${inputClass} w-24 text-right`}
+                  />
                 </td>
                 {showCategory && (
                   <td className="py-1.5 pr-2">
-                    {readOnly ? (
-                      <span className="text-sm">{exp.category_name}</span>
-                    ) : (
-                      <select
-                        value={getEditValue(exp, "category_id")}
-                        onChange={(e) =>
-                          handleCategoryChange(exp, e.target.value)
-                        }
-                        className={`${selectClass} w-36`}
-                      >
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </td>
-                )}
-                <td className="py-1.5 pr-2">
-                  {readOnly ? (
-                    <span className="text-sm">
-                      {exp.sub_item_label || "—"}
-                    </span>
-                  ) : (
                     <select
-                      value={getEditValue(exp, "sub_item_id")}
-                      onChange={(e) => handleSubItemChange(exp, e.target.value)}
-                      className={`${selectClass} w-32`}
+                      value={getEditValue(exp, "category_id")}
+                      onChange={(e) =>
+                        handleCategoryChange(exp, e.target.value)
+                      }
+                      className={`${selectClass} w-36`}
                     >
-                      <option value="">—</option>
-                      {getSubItemsForExpense(exp).map((sub) => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.label}
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
                         </option>
                       ))}
                     </select>
-                  )}
+                  </td>
+                )}
+                <td className="py-1.5 pr-2">
+                  <select
+                    value={getEditValue(exp, "sub_item_id")}
+                    onChange={(e) => handleSubItemChange(exp, e.target.value)}
+                    className={`${selectClass} w-32`}
+                  >
+                    <option value="">—</option>
+                    {getSubItemsForExpense(exp).map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.label}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td className="py-1.5 pr-2">
-                  {readOnly ? (
-                    <span className="text-sm text-[var(--text-muted)]">
-                      {exp.notes || "—"}
-                    </span>
-                  ) : (
-                    <input
-                      type="text"
-                      value={getEditValue(exp, "notes")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "notes", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "notes")}
-                      placeholder="—"
-                      className={`${inputClass} w-32`}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    value={getEditValue(exp, "notes")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "notes", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "notes")}
+                    placeholder="—"
+                    className={`${inputClass} w-32`}
+                  />
                 </td>
-                {!readOnly && (
-                  <td className="py-1.5">
+                <td className="py-1.5">
                     {confirmingDelete === exp.id ? (
                       <span className="flex items-center gap-1 text-xs">
                         <span className="text-[var(--error-text)]">Delete?</span>
@@ -412,6 +381,7 @@ export default function ExpenseTable({
                     ) : (
                       <button
                         onClick={() => setConfirmingDelete(exp.id)}
+                        aria-label={`Delete ${formatCurrency(Number(exp.amount))} expense from ${formatDate(exp.date)}`}
                         className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--error-bg)] hover:text-[var(--error-text)]"
                       >
                         <svg
@@ -431,7 +401,6 @@ export default function ExpenseTable({
                       </button>
                     )}
                   </td>
-                )}
               </tr>
             ))}
           </tbody>
@@ -448,55 +417,39 @@ export default function ExpenseTable({
             <div className="flex items-start justify-between">
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  {readOnly ? (
-                    <span className="text-sm font-medium">
-                      {formatDate(exp.date)}
-                    </span>
-                  ) : (
-                    <input
-                      type="date"
-                      value={getEditValue(exp, "date")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "date", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "date")}
-                      className={`${inputClass} w-32`}
-                    />
-                  )}
-                  {readOnly ? (
-                    <span className="font-semibold">
-                      {formatCurrency(Number(exp.amount))}
-                    </span>
-                  ) : (
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={getEditValue(exp, "amount")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "amount", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "amount")}
-                      className={`${inputClass} w-24 text-right font-medium`}
-                    />
-                  )}
+                  <input
+                    type="date"
+                    value={getEditValue(exp, "date")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "date", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "date")}
+                    className={`${inputClass} w-32`}
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={getEditValue(exp, "amount")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "amount", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "amount")}
+                    className={`${inputClass} w-24 text-right font-medium`}
+                  />
                 </div>
 
                 <div>
                   <label className="text-xs text-[var(--text-muted)]">Vendor</label>
-                  {readOnly ? (
-                    <p className="text-sm">{exp.vendor || "—"}</p>
-                  ) : (
-                    <input
-                      type="text"
-                      value={getEditValue(exp, "vendor")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "vendor", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "vendor")}
-                      placeholder="—"
-                      className={inputClass}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    value={getEditValue(exp, "vendor")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "vendor", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "vendor")}
+                    placeholder="—"
+                    className={inputClass}
+                  />
                 </div>
 
                 {showCategory && (
@@ -504,108 +457,93 @@ export default function ExpenseTable({
                     <label className="text-xs text-[var(--text-muted)]">
                       Category
                     </label>
-                    {readOnly ? (
-                      <p className="text-sm">{exp.category_name}</p>
-                    ) : (
-                      <select
-                        value={getEditValue(exp, "category_id")}
-                        onChange={(e) =>
-                          handleCategoryChange(exp, e.target.value)
-                        }
-                        className={selectClass}
-                      >
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <select
+                      value={getEditValue(exp, "category_id")}
+                      onChange={(e) =>
+                        handleCategoryChange(exp, e.target.value)
+                      }
+                      className={selectClass}
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
                 <div>
                   <label className="text-xs text-[var(--text-muted)]">Sub-Item</label>
-                  {readOnly ? (
-                    <p className="text-sm">{exp.sub_item_label || "—"}</p>
-                  ) : (
-                    <select
-                      value={getEditValue(exp, "sub_item_id")}
-                      onChange={(e) => handleSubItemChange(exp, e.target.value)}
-                      className={selectClass}
-                    >
-                      <option value="">—</option>
-                      {getSubItemsForExpense(exp).map((sub) => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    value={getEditValue(exp, "sub_item_id")}
+                    onChange={(e) => handleSubItemChange(exp, e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">—</option>
+                    {getSubItemsForExpense(exp).map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="text-xs text-[var(--text-muted)]">Notes</label>
-                  {readOnly ? (
-                    <p className="text-sm text-[var(--text-muted)]">
-                      {exp.notes || "—"}
-                    </p>
-                  ) : (
-                    <input
-                      type="text"
-                      value={getEditValue(exp, "notes")}
-                      onChange={(e) =>
-                        setEditField(exp.id, "notes", e.target.value)
-                      }
-                      onBlur={() => saveField(exp, "notes")}
-                      placeholder="—"
-                      className={inputClass}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    value={getEditValue(exp, "notes")}
+                    onChange={(e) =>
+                      setEditField(exp.id, "notes", e.target.value)
+                    }
+                    onBlur={() => saveField(exp, "notes")}
+                    placeholder="—"
+                    className={inputClass}
+                  />
                 </div>
               </div>
 
-              {!readOnly && (
-                <div className="ml-2 flex-shrink-0">
-                  {confirmingDelete === exp.id ? (
-                    <div className="flex flex-col items-center gap-1 text-xs">
-                      <span className="text-[var(--error-text)]">Delete?</span>
-                      <button
-                        onClick={() => handleDelete(exp.id)}
-                        className="font-medium text-[var(--error-text)] hover:underline"
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={() => setConfirmingDelete(null)}
-                        className="font-medium text-[var(--text-muted)] hover:underline"
-                      >
-                        No
-                      </button>
-                    </div>
-                  ) : (
+              <div className="ml-2 flex-shrink-0">
+                {confirmingDelete === exp.id ? (
+                  <div className="flex flex-col items-center gap-1 text-xs">
+                    <span className="text-[var(--error-text)]">Delete?</span>
                     <button
-                      onClick={() => setConfirmingDelete(exp.id)}
-                      className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--error-bg)] hover:text-[var(--error-text)]"
+                      onClick={() => handleDelete(exp.id)}
+                      className="font-medium text-[var(--error-text)] hover:underline"
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
+                      Yes
                     </button>
-                  )}
-                </div>
-              )}
+                    <button
+                      onClick={() => setConfirmingDelete(null)}
+                      className="font-medium text-[var(--text-muted)] hover:underline"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingDelete(exp.id)}
+                    aria-label={`Delete ${formatCurrency(Number(exp.amount))} expense from ${formatDate(exp.date)}`}
+                    className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--error-bg)] hover:text-[var(--error-text)]"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

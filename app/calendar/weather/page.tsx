@@ -129,7 +129,7 @@ export default function WeatherDashboardPage() {
 
   if (notConfigured) {
     return (
-      <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+      <div className="mx-auto max-w-2xl">
         <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
           Weather Dashboard
         </h1>
@@ -152,7 +152,7 @@ export default function WeatherDashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
         Weather Dashboard
       </h1>

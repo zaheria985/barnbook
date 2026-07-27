@@ -32,7 +32,7 @@ export default function HorsesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
         Horses
       </h1>

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { localToday } from "@/lib/dates";
 
 interface VetRecord {
@@ -111,6 +112,7 @@ function formatDate(dateStr: string): string {
 export default function HorseDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { confirm, confirmElement } = useConfirm();
 
   const [horse, setHorse] = useState<{
     id: string;
@@ -326,7 +328,7 @@ export default function HorseDetailPage() {
   }
 
   async function handleDelete(scheduleId: string) {
-    if (!confirm("Delete this treatment schedule?")) return;
+    if (!(await confirm("Delete this treatment schedule?"))) return;
     try {
       const res = await fetch(`/api/treatments/${scheduleId}`, {
         method: "DELETE",
@@ -391,7 +393,7 @@ export default function HorseDetailPage() {
     }
   }
   async function handleDeleteVet(recordId: string) {
-    if (!confirm("Delete this vet record?")) return;
+    if (!(await confirm("Delete this vet record?"))) return;
     try {
       const res = await fetch(`/api/horses/${id}/vet-records/${recordId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -435,7 +437,7 @@ export default function HorseDetailPage() {
     }
   }
   async function handleDeleteReceipt(recordId: string, receiptId: string) {
-    if (!confirm("Delete this receipt?")) return;
+    if (!(await confirm("Delete this receipt?"))) return;
     try {
       const res = await fetch(
         `/api/horses/${id}/vet-records/${recordId}/receipts/${receiptId}`,
@@ -503,7 +505,7 @@ export default function HorseDetailPage() {
     }
   }
   async function handleDeleteVaccine(recordId: string) {
-    if (!confirm("Delete this vaccine record?")) return;
+    if (!(await confirm("Delete this vaccine record?"))) return;
     try {
       const res = await fetch(`/api/horses/${id}/vaccines/${recordId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -571,7 +573,7 @@ export default function HorseDetailPage() {
     }
   }
   async function handleDeleteFarrier(recordId: string) {
-    if (!confirm("Delete this farrier record?")) return;
+    if (!(await confirm("Delete this farrier record?"))) return;
     try {
       const res = await fetch(`/api/horses/${id}/farrier-records/${recordId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -799,7 +801,7 @@ export default function HorseDetailPage() {
   }
 
   return (
-    <div className="pb-20 md:pb-8">
+    <div className="mx-auto max-w-3xl">
       {/* Back link */}
       <Link
         href="/horses"
@@ -1236,6 +1238,7 @@ export default function HorseDetailPage() {
         onChange={handleReceiptUpload}
         className="hidden"
       />
+      {confirmElement}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import CategoryCard from "@/components/budget/CategoryCard";
 import SpendingPieChart from "@/components/budget/SpendingPieChart";
 import BudgetBarChart from "@/components/budget/BudgetBarChart";
 import YearlySummary from "@/components/budget/YearlySummary";
+import { ChartSkeleton, SkeletonCard } from "@/components/ui/PageSkeleton";
 import type { CategoryOverview } from "@/lib/queries/budget-overview";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
 import type { SpendingTrend } from "@/lib/queries/expense-trends";
@@ -216,7 +217,15 @@ export default function BudgetPage() {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-[var(--text-muted)]">Loading...</div>
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6 h-8 w-32 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+        <div className="space-y-4">
+          <ChartSkeleton title="Spending by Category" />
+          <ChartSkeleton title="Budget vs Actual" />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </div>
     );
   }
 
@@ -230,7 +239,7 @@ export default function BudgetPage() {
   const netWithIncome = data.total_income_actual - data.total_spent;
 
   return (
-    <div className="mx-auto max-w-3xl pb-20">
+    <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">Budget</h1>
         <MonthSelector value={month} onChange={setMonth} />
@@ -474,7 +483,7 @@ export default function BudgetPage() {
 
       <Link
         href="/budget/entry"
-        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--interactive)] text-white shadow-lg hover:bg-[var(--interactive-hover)] md:bottom-8"
+        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--interactive)] text-white shadow-lg hover:bg-[var(--interactive-hover)] md:hidden"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
       </Link>

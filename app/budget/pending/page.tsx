@@ -107,7 +107,7 @@ export default function PendingExpensesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
           Pending Email Expenses

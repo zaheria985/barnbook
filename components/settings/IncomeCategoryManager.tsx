@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { IncomeCategory, IncomeSubItem } from "@/lib/queries/income";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 export default function IncomeCategoryManager() {
+  const { confirm, confirmElement } = useConfirm();
   const [categories, setCategories] = useState<IncomeCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -79,7 +81,7 @@ export default function IncomeCategoryManager() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete income category "${name}"?`)) return;
+    if (!(await confirm(`Delete income category "${name}"?`))) return;
     try {
       const res = await fetch(`/api/income/sources/${id}`, {
         method: "DELETE",
@@ -172,7 +174,7 @@ export default function IncomeCategoryManager() {
     subItemId: string,
     label: string
   ) {
-    if (!confirm(`Delete sub-item "${label}"?`)) return;
+    if (!(await confirm(`Delete sub-item "${label}"?`))) return;
     try {
       const res = await fetch(
         `/api/income/categories/${categoryId}/sub-items/${subItemId}`,
@@ -492,6 +494,7 @@ export default function IncomeCategoryManager() {
           ))}
         </div>
       )}
+      {confirmElement}
     </div>
   );
 }

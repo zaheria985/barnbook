@@ -47,6 +47,7 @@ export default function MobileMoreSheet({
 }) {
   const pathname = usePathname();
   const sheetRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   // Which settings tab is open. Read from the URL rather than useSearchParams:
   // this component lives in the root layout, where that hook would force a
   // Suspense boundary onto every page. The sheet closes on navigation, so
@@ -72,6 +73,17 @@ export default function MobileMoreSheet({
     };
   }, [open]);
 
+  // Dialog behavior: Escape closes, focus moves into the sheet on open.
+  useEffect(() => {
+    if (!open) return;
+    closeButtonRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
@@ -84,13 +96,18 @@ export default function MobileMoreSheet({
       {/* Sheet */}
       <div
         ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="More options"
         className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[var(--surface)] pb-8 pt-4 shadow-xl animate-slide-up"
       >
         {/* Handle bar */}
         <div className="mb-4 flex items-center justify-between px-4">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">More</h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
+            aria-label="Close menu"
             className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
           >
             <IconX size={18} />

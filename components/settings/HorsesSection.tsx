@@ -5,8 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import Modal from "@/components/ui/Modal";
 import type { Horse } from "@/lib/queries/horses";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 export default function HorsesSection() {
+  const { confirm, confirmElement } = useConfirm();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -144,7 +146,7 @@ export default function HorsesSection() {
   }
 
   async function handleDelete(horse: Horse) {
-    if (!confirm(`Delete "${horse.name}"? This cannot be undone.`)) return;
+    if (!(await confirm(`Delete "${horse.name}"? This cannot be undone.`))) return;
     try {
       const res = await fetch(`/api/horses/${horse.id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -456,6 +458,7 @@ export default function HorsesSection() {
           </div>
         </form>
       </Modal>
+      {confirmElement}
     </>
   );
 }

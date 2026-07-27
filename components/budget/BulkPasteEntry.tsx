@@ -323,7 +323,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                           placeholder="YYYY-MM-DD"
                           className={`w-full rounded border border-[var(--input-border)] bg-[var(--input-bg)] px-2 py-1 text-sm ${
                             row.dateDefaulted
-                              ? "text-amber-600 italic dark:text-amber-400"
+                              ? "text-[var(--warning-text)] italic"
                               : "text-[var(--input-text)]"
                           }`}
                         />
@@ -387,7 +387,7 @@ export default function BulkPasteEntry({ categories, onSave }: BulkPasteEntryPro
                             {fatalErrors.join(", ")}
                           </span>
                         ) : row.dateDefaulted ? (
-                          <span className="text-amber-600 dark:text-amber-400">
+                          <span className="text-[var(--warning-text)]">
                             Date defaulted
                           </span>
                         ) : (

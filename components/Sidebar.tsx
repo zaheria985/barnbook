@@ -16,6 +16,7 @@ import {
   IconLogOut,
   IconReceipt,
   IconClipboard,
+  IconPlus,
 } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -24,10 +25,12 @@ const mainItems = [
   { href: "/budget", label: "Budget", icon: IconWallet },
   { href: "/budget/income", label: "Income", icon: IconChartLine },
   { href: "/budget/expenses", label: "Expenses", icon: IconReceipt },
+  { href: "/budget/entry", label: "Add Expense", icon: IconPlus },
   { href: "/budget/bulk", label: "Bulk Entry", icon: IconTable },
   { href: "/budget/vendors", label: "Vendors", icon: IconStore },
   { href: "/budget/pending", label: "Pending", icon: IconInbox },
   { href: "/rides", label: "Rides", icon: IconHorse },
+  { href: "/rides/stats", label: "Ride Stats", icon: IconChartLine },
   { href: "/horses", label: "Horses", icon: IconClipboard },
   { href: "/calendar", label: "Calendar", icon: IconCalendar },
 ];
@@ -42,10 +45,21 @@ export default function Sidebar() {
 
   if (pathname.startsWith("/auth")) return null;
 
+  // An item is active when its href matches the path and no other nav item
+  // matches more specifically — so /budget/entry lights "Add Expense" without
+  // also lighting "Budget", while /budget/close still falls back to "Budget".
+  function matches(href: string) {
+    return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  const allHrefs = [...mainItems, ...settingsItems].map((i) => i.href);
+
   function isActive(href: string) {
-    return href === "/budget"
-      ? pathname === "/budget"
-      : pathname === href || pathname.startsWith(href + "/");
+    if (href === "/") return pathname === "/";
+    if (!matches(href)) return false;
+    return !allHrefs.some(
+      (h) => h !== href && h.length > href.length && matches(h)
+    );
   }
 
   function renderNavItem(item: { href: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }) {
@@ -102,7 +116,7 @@ export default function Sidebar() {
           <IconLogOut size={18} />
           Sign Out
         </button>
-        <p className="mt-2 px-3 text-xs text-[var(--muted-text)]">
+        <p className="mt-2 px-3 text-xs text-[var(--text-muted)]">
           Barnbook v0.1
         </p>
       </footer>

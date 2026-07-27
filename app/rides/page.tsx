@@ -6,6 +6,7 @@ import MonthSelector from "@/components/budget/MonthSelector";
 import RideCard from "@/components/rides/RideCard";
 import type { RideSession } from "@/lib/queries/rides";
 import type { Horse } from "@/lib/queries/horses";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 function groupByDate(rides: RideSession[]): Record<string, RideSession[]> {
   const groups: Record<string, RideSession[]> = {};
@@ -27,6 +28,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function RideLogPage() {
+  const { confirm, confirmElement } = useConfirm();
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -65,7 +67,7 @@ export default function RideLogPage() {
   }, [fetchData]);
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this ride?")) return;
+    if (!(await confirm("Delete this ride?"))) return;
     try {
       const res = await fetch(`/api/rides/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -88,7 +90,7 @@ export default function RideLogPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl pb-20">
+    <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">Rides</h1>
         <MonthSelector value={month} onChange={setMonth} />
@@ -203,6 +205,7 @@ export default function RideLogPage() {
           <path d="M12 5v14" />
         </svg>
       </Link>
+      {confirmElement}
     </div>
   );
 }

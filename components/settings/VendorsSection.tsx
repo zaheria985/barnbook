@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
 import type { VendorMapping } from "@/lib/queries/vendor-mappings";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 interface Category {
   id: string;
@@ -10,6 +11,7 @@ interface Category {
 }
 
 export default function VendorsSection() {
+  const { confirm, confirmElement } = useConfirm();
   const [mappings, setMappings] = useState<VendorMapping[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export default function VendorsSection() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this vendor mapping?")) return;
+    if (!(await confirm("Delete this vendor mapping?"))) return;
     try {
       const res = await fetch(`/api/vendors/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -225,6 +227,7 @@ export default function VendorsSection() {
           </div>
         </form>
       </Modal>
+      {confirmElement}
     </>
   );
 }

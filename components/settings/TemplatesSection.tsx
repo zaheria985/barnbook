@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
 import type { TemplateWithItems } from "@/lib/queries/checklist-templates";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 const EVENT_TYPES = [
   { value: "show", label: "Show" },
@@ -27,6 +28,7 @@ interface FormItem {
 }
 
 export default function TemplatesSection() {
+  const { confirm, confirmElement } = useConfirm();
   const [templates, setTemplates] = useState<TemplateListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -141,7 +143,7 @@ export default function TemplatesSection() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this template?")) return;
+    if (!(await confirm("Delete this template?"))) return;
     try {
       const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -371,6 +373,7 @@ export default function TemplatesSection() {
           </div>
         </form>
       </Modal>
+      {confirmElement}
     </>
   );
 }

@@ -105,7 +105,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-3xl">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">

@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { Event } from "@/lib/queries/events";
 import type { SuggestedWindow } from "@/lib/queries/icloud-sync";
 import { localToday } from "@/lib/dates";
+import { SkeletonCard } from "@/components/ui/PageSkeleton";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   show: "Show",
@@ -142,6 +144,7 @@ function formatShortDate(dateStr: string): string {
 }
 
 export default function WeeklyDigestPage() {
+  const { confirm, confirmElement } = useConfirm();
   const [unconfirmedEvents, setUnconfirmedEvents] = useState<Event[]>([]);
   const [confirmedEvents, setConfirmedEvents] = useState<Event[]>([]);
   const [windows, setWindows] = useState<SuggestedWindow[]>([]);
@@ -296,7 +299,7 @@ export default function WeeklyDigestPage() {
   }
 
   async function handleDismiss(eventId: string) {
-    if (!confirm("Dismiss this event? It will be deleted.")) return;
+    if (!(await confirm("Dismiss this event? It will be deleted.", "Dismiss"))) return;
     try {
       const res = await fetch(`/api/calendar-intel/dismiss/${eventId}`, {
         method: "POST",
@@ -336,8 +339,14 @@ export default function WeeklyDigestPage() {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-[var(--text-muted)]">
-        Loading digest...
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-2 h-8 w-56 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+        <div className="mb-6 h-4 w-72 animate-pulse rounded bg-[var(--surface-muted)]" />
+        <div className="space-y-4">
+          <SkeletonCard lines={2} />
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={3} />
+        </div>
       </div>
     );
   }
@@ -347,7 +356,7 @@ export default function WeeklyDigestPage() {
   const isEmpty = !hasTimelineContent && !hasComingUp;
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-2xl">
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -520,6 +529,7 @@ export default function WeeklyDigestPage() {
           </div>
         </div>
       )}
+      {confirmElement}
     </div>
   );
 }

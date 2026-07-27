@@ -101,7 +101,7 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">Today at the Barn</h1>
 
       {/* Ride days */}

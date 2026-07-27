@@ -187,7 +187,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-3xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
           Settings

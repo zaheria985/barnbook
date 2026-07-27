@@ -25,3 +25,8 @@ Barnbook — Next.js 14 equestrian management app (TypeScript, PostgreSQL, Tailw
 - Event types: show, vet, farrier, lesson, pony_club, clinic, ride, other — when adding types, update labels/badges in `EventCard.tsx`, `digest/page.tsx`
 - No semicolon-free style — standard TypeScript with semicolons
 - Prefer `Promise.all()` for parallel independent queries in API routes
+- Destructive confirmations: use `useConfirm()` from `components/ui/ConfirmDialog` (never native `confirm()`); inline two-step Yes/No is acceptable for dense table rows (see `ExpenseTable`)
+- Page containers: `mx-auto max-w-3xl` default, `max-w-4xl` for table-heavy pages; never add page-level bottom padding (the layout's `<main>` handles the mobile tab-bar clearance)
+- Single-expense entry: use the shared `QuickAddExpenseForm` (`variant="page" | "embedded"`), don't fork it
+- Loading states: use `PageSkeleton` / `SkeletonCard` / `ChartSkeleton` from `components/ui/PageSkeleton`, not "Loading..." text
+- Chart colors: use `lib/chart-colors.ts` (`var(--chart-N)` strings) — never hardcode hex in chart components (breaks dark mode)

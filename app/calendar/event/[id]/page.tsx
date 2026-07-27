@@ -7,6 +7,7 @@ import type { Event } from "@/lib/queries/events";
 import type { EventChecklistItem } from "@/lib/queries/event-checklists";
 import type { ChecklistTemplate } from "@/lib/queries/checklist-templates";
 import type { EventAttachment } from "@/lib/queries/event-attachments";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   show: "Show",
@@ -31,6 +32,7 @@ const EVENT_TYPE_BADGE: Record<string, string> = {
 };
 
 export default function EventDetailPage() {
+  const { confirm, confirmElement } = useConfirm();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -149,7 +151,7 @@ export default function EventDetailPage() {
     const message = isParent
       ? "Delete this event and all future recurring instances? This cannot be undone."
       : "Delete this event? This cannot be undone.";
-    if (!confirm(message)) return;
+    if (!(await confirm(message))) return;
     try {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
@@ -188,7 +190,7 @@ export default function EventDetailPage() {
   }
 
   async function handleDeleteAttachment(attachmentId: string) {
-    if (!confirm("Delete this attachment?")) return;
+    if (!(await confirm("Delete this attachment?"))) return;
     try {
       const res = await fetch(`/api/events/${id}/attachments/${attachmentId}`, {
         method: "DELETE",
@@ -231,7 +233,7 @@ export default function EventDetailPage() {
   );
 
   return (
-    <div className="mx-auto max-w-2xl pb-20 md:pb-8">
+    <div className="mx-auto max-w-2xl">
       {/* Header */}
       <div className="mb-6">
         <button
@@ -500,6 +502,7 @@ export default function EventDetailPage() {
           </p>
         )}
       </div>
+      {confirmElement}
     </div>
   );
 }

@@ -184,7 +184,7 @@ export default function RideEntryPage() {
   // Show footing prompt after ride save
   if (savedRide) {
     return (
-      <div className="mx-auto max-w-lg pb-20">
+      <div className="mx-auto max-w-lg">
         <div className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] p-6 text-center">
           <p className="mb-4 text-lg font-medium text-[var(--success-text)]">
             Ride logged!
@@ -230,7 +230,7 @@ export default function RideEntryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg pb-20">
+    <div className="mx-auto max-w-lg">
       <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
         Log Ride
       </h1>

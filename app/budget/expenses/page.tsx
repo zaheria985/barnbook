@@ -7,6 +7,7 @@ import MonthSelector from "@/components/budget/MonthSelector";
 import ExpenseTable from "@/components/budget/ExpenseTable";
 import type { Expense } from "@/lib/queries/expenses";
 import type { BudgetCategory } from "@/lib/queries/budget-categories";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -107,8 +108,10 @@ function ExpensesContent() {
 
       <div className="rounded-2xl border border-[var(--border-light)] bg-[var(--surface)] p-4">
         {loading ? (
-          <div className="py-8 text-center text-[var(--text-muted)]">
-            Loading...
+          <div className="animate-pulse space-y-3 py-2">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="h-9 rounded bg-[var(--surface-muted)]" />
+            ))}
           </div>
         ) : (
           <ExpenseTable
@@ -134,13 +137,7 @@ function ExpensesContent() {
 
 export default function ExpensesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="py-12 text-center text-[var(--text-muted)]">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSkeleton />}>
       <ExpensesContent />
     </Suspense>
   );
